@@ -48,8 +48,19 @@ const userSchema = new mongoose.Schema(
     // User's gender
     gender: {
       type: String,
-      enum: ['male', 'female', 'other', 'prefer not to say'],
+      enum: {
+        values: ['Male', 'Female', 'Other', 'prefer not to say'],
+        message: '{VALUE} is not a supported gender option',
+      },
       default: 'prefer not to say',
+      set: function (val) {
+        if (typeof val !== 'string') return val;
+        const normalized = val.trim().toLowerCase();
+        if (normalized === 'male') return 'Male';
+        if (normalized === 'female') return 'Female';
+        if (normalized === 'other') return 'Other';
+        return val;
+      },
     },
 
     // User's height in centimeters
@@ -74,10 +85,10 @@ const userSchema = new mongoose.Schema(
 
 // Middleware: Hash password before saving to the database
 // This runs automatically when a user is created or password is modified
-userSchema.pre('save', async function (next) {
-  // If password is not modified, skip hashing
+userSchema.pre('save', async function () {
+  // If password is not modified, skip hashing and exit early
   if (!this.isModified('password')) {
-    next();
+    return;
   }
 
   try {
@@ -86,9 +97,9 @@ userSchema.pre('save', async function (next) {
 
     // Hash the password using bcrypt
     this.password = await bcrypt.hash(this.password, salt);
-    next();
   } catch (error) {
-    next(error);
+    // Throw error so Mongoose aborts save and handles it
+    throw error;
   }
 });
 

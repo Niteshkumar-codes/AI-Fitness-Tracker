@@ -77,8 +77,12 @@ const registerUser = async (req, res) => {
       },
     });
   } catch (error) {
-    // Log error for debugging
-    console.error('Error in registerUser:', error.message);
+    // Log detailed error information for debugging
+    console.error('Error in registerUser:');
+    console.error('Error Name:', error.name);
+    console.error('Error Message:', error.message);
+    console.error('Complete Error Object:', error);
+    console.error('Stack Trace:', error.stack);
 
     // Return error response
     res.status(500).json({
