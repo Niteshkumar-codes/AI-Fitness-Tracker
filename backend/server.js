@@ -15,6 +15,10 @@ console.log('📦 MongoDB connection function imported');
 const authRoutes = require('./src/routes/authRoutes');
 console.log('📦 Authentication routes imported');
 
+// Import workout routes for workout tracking and management
+const workoutRoutes = require('./src/routes/workoutRoutes');
+console.log('📦 Workout routes imported');
+
 // Create a new Express application instance
 const app = express();
 console.log('🚀 Express app instance created');
@@ -45,6 +49,15 @@ console.log('📍 Health-check route (GET /) registered');
 //   GET /api/auth/profile - Get authenticated user profile (requires token)
 app.use('/api/auth', authRoutes);
 console.log('🔐 Authentication routes registered at /api/auth');
+
+// ============ WORKOUT ROUTES ============
+// Register workout routes for tracking workouts
+// Available endpoints:
+//   POST /api/workouts - Add a new workout (requires token)
+//   GET /api/workouts - Get all workouts for the authenticated user (requires token)
+//   DELETE /api/workouts/:id - Delete a specific workout (requires token)
+app.use('/api/workouts', workoutRoutes);
+console.log('🏋️‍♂️ Workout routes registered at /api/workouts');
 
 // ============ SERVER STARTUP ============
 // Read the port from environment variables with a fallback to port 5000
