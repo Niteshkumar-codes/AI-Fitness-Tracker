@@ -19,6 +19,10 @@ console.log('📦 Authentication routes imported');
 const workoutRoutes = require('./src/routes/workoutRoutes');
 console.log('📦 Workout routes imported');
 
+// Import food routes for food intake tracking and management
+const foodRoutes = require('./src/routes/foodRoutes');
+console.log('📦 Food routes imported');
+
 // Create a new Express application instance
 const app = express();
 console.log('🚀 Express app instance created');
@@ -58,6 +62,15 @@ console.log('🔐 Authentication routes registered at /api/auth');
 //   DELETE /api/workouts/:id - Delete a specific workout (requires token)
 app.use('/api/workouts', workoutRoutes);
 console.log('🏋️‍♂️ Workout routes registered at /api/workouts');
+
+// ============ FOOD ROUTES ============
+// Register food routes for tracking nutrition and meals
+// Available endpoints:
+//   POST /api/foods - Add a new food entry (requires token)
+//   GET /api/foods - Get all food entries for the authenticated user (requires token)
+//   DELETE /api/foods/:id - Delete a specific food entry (requires token)
+app.use('/api/foods', foodRoutes);
+console.log('🍎 Food routes registered at /api/foods');
 
 // ============ SERVER STARTUP ============
 // Read the port from environment variables with a fallback to port 5000
