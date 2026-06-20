@@ -23,6 +23,14 @@ console.log('📦 Workout routes imported');
 const foodRoutes = require('./src/routes/foodRoutes');
 console.log('📦 Food routes imported');
 
+// Import goal routes for goal tracking and management
+const goalRoutes = require('./src/routes/goalRoutes');
+console.log('📦 Goal routes imported');
+
+// Import analytics routes for health stats and dashboard analytics
+const analyticsRoutes = require('./src/routes/analyticsRoutes');
+console.log('📦 Analytics routes imported');
+
 // Create a new Express application instance
 const app = express();
 console.log('🚀 Express app instance created');
@@ -71,6 +79,24 @@ console.log('🏋️‍♂️ Workout routes registered at /api/workouts');
 //   DELETE /api/foods/:id - Delete a specific food entry (requires token)
 app.use('/api/foods', foodRoutes);
 console.log('🍎 Food routes registered at /api/foods');
+
+// ============ GOAL ROUTES ============
+// Register goal routes for tracking user fitness goals
+// Available endpoints:
+//   POST /api/goals - Create a new goal (requires token)
+//   GET  /api/goals - Get all goals for the authenticated user (requires token)
+//   PUT  /api/goals/:id - Update a specific goal (requires token)
+//   DELETE /api/goals/:id - Delete a specific goal (requires token)
+app.use('/api/goals', goalRoutes);
+console.log('🎯 Goal routes registered at /api/goals');
+
+// ============ ANALYTICS ROUTES ============
+// Register health analytics routes (BMI calculator, daily/lifetime dashboard statistics)
+// Available endpoints:
+//   GET /api/analytics/bmi - Calculate BMI (requires token)
+//   GET /api/analytics/dashboard - Retrieve dashboard stats (requires token)
+app.use('/api/analytics', analyticsRoutes);
+console.log('📊 Analytics routes registered at /api/analytics');
 
 // ============ SERVER STARTUP ============
 // Read the port from environment variables with a fallback to port 5000
