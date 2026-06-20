@@ -31,6 +31,10 @@ console.log('📦 Goal routes imported');
 const analyticsRoutes = require('./src/routes/analyticsRoutes');
 console.log('📦 Analytics routes imported');
 
+// Import water intake routes for logging water consumption
+const waterRoutes = require('./src/routes/waterRoutes');
+console.log('📦 Water routes imported');
+
 // Create a new Express application instance
 const app = express();
 console.log('🚀 Express app instance created');
@@ -97,6 +101,16 @@ console.log('🎯 Goal routes registered at /api/goals');
 //   GET /api/analytics/dashboard - Retrieve dashboard stats (requires token)
 app.use('/api/analytics', analyticsRoutes);
 console.log('📊 Analytics routes registered at /api/analytics');
+
+// ============ WATER INTAKE ROUTES ============
+// Register water intake routes for logging water and tracking daily stats
+// Available endpoints:
+//   POST   /api/water - Add water intake log (requires token)
+//   GET    /api/water - Retrieve user's water logs (requires token)
+//   GET    /api/water/stats - Retrieve user's daily water stats & goals (requires token)
+//   DELETE /api/water/:id - Delete a specific water log (requires token)
+app.use('/api/water', waterRoutes);
+console.log('💧 Water routes registered at /api/water');
 
 // ============ SERVER STARTUP ============
 // Read the port from environment variables with a fallback to port 5000
