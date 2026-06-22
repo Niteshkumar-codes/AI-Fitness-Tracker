@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Droplet, Plus, RefreshCw } from 'lucide-react';
 
 /**
@@ -6,22 +6,33 @@ import { Droplet, Plus, RefreshCw } from 'lucide-react';
  * 
  * Purpose:
  * Renders daily water intake log.
- * Provides interactive water logging (+250ml) powered by local state.
+ * Provides interactive water logging (+250ml) powered by local state and parent API callbacks.
  * Displays completed percentage and a clean progress indicator.
  */
-const WaterCard = ({ initialIntakeMl = 750, goalMl = 2000 }) => {
+const WaterCard = ({ initialIntakeMl = 750, goalMl = 2000, onAddWater, onReset }) => {
   const [waterMl, setWaterMl] = useState(initialIntakeMl);
+
+  useEffect(() => {
+    setWaterMl(initialIntakeMl);
+  }, [initialIntakeMl]);
 
   const progressPercent = Math.min(100, Math.round((waterMl / goalMl) * 100));
   const glasses = (waterMl / 250).toFixed(1);
 
-  const addGlass = () => {
-    // Add 250ml up to double the daily goal
-    setWaterMl(prev => Math.min(goalMl * 2, prev + 250));
+  const addGlass = async () => {
+    if (onAddWater) {
+      await onAddWater(250);
+    } else {
+      setWaterMl(prev => Math.min(goalMl * 2, prev + 250));
+    }
   };
 
-  const resetIntake = () => {
-    setWaterMl(0);
+  const resetIntake = async () => {
+    if (onReset) {
+      await onReset();
+    } else {
+      setWaterMl(0);
+    }
   };
 
   return (

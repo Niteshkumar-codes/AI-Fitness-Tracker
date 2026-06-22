@@ -13,7 +13,7 @@ import { Scale, Info } from 'lucide-react';
  * - height: User height in cm.
  * - weight: User weight in kg.
  */
-const BMICard = ({ bmi = 22.86, height = 175, weight = 70 }) => {
+const BMICard = ({ bmi = 22.86, height = 175, weight = 70, incomplete = false }) => {
   // Determine WHO category, color code, and percentage position on the scale
   const getBMICategory = (val) => {
     if (val < 18.5) {
@@ -27,6 +27,30 @@ const BMICard = ({ bmi = 22.86, height = 175, weight = 70 }) => {
     }
     return { label: 'Obese', color: 'text-red-400 bg-red-400/10 border-red-400/20', position: '92%' };
   };
+
+  if (incomplete || !bmi) {
+    return (
+      <div className="p-6 rounded-3xl border border-slate-900 bg-slate-900/30 backdrop-blur-md relative overflow-hidden group hover:border-slate-800 transition-all duration-300 flex flex-col justify-between h-full min-h-[220px]">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+            <Scale className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-200 text-sm">Health Index</h3>
+            <p className="text-[10px] text-slate-400">Body Mass Index</p>
+          </div>
+        </div>
+        
+        <div className="my-4 text-xs text-slate-400 leading-normal">
+          ⚠️ <strong>Profile Incomplete:</strong> Please update your height and weight in your profile to enable real-time BMI calculations.
+        </div>
+        
+        <a href="/profile" className="text-xs text-purple-400 font-bold hover:underline flex items-center gap-1">
+          Complete Profile &rarr;
+        </a>
+      </div>
+    );
+  }
 
   const category = getBMICategory(bmi);
 

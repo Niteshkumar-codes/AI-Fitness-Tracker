@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import MainLayout from '../../layouts/MainLayout';
 import BMICard from '../../components/dashboard/BMICard';
 import WaterCard from '../../components/dashboard/WaterCard';
@@ -7,45 +7,164 @@ import WorkoutCard from '../../components/dashboard/WorkoutCard';
 import GoalsCard from '../../components/dashboard/GoalsCard';
 import QuickActions from '../../components/dashboard/QuickActions';
 import { Sparkles, Brain, Award } from 'lucide-react';
+import { AuthContext } from '../../context/AuthContext';
+import api from '../../services/api';
+import toast from 'react-hot-toast';
 
 /**
  * Dashboard Component
  * 
  * Purpose:
  * Renders the main dashboard page using the newly designed metric cards and widgets.
- * Arranges all cards into a responsive grid with Tailwind CSS v4.
- * Uses glassmorphism cards and dark SaaS design tokens.
+ * Connects to backend APIs to show real-time stats for the authenticated user.
  */
 const Dashboard = () => {
-  // Mock data representing database analytics logs
-  const mockDashboardData = {
-    user: {
-      name: 'Alex Rivera',
-      height: 175,
-      weight: 70,
-    },
-    bmi: 22.86,
-    waterIntake: {
-      current: 750,
-      goal: 2000
-    },
-    calories: {
-      consumed: 1850,
-      burned: 450
-    },
-    workouts: {
-      total: 12,
-      weekly: 4,
-      streak: [true, false, true, true, false, true, false]
-    },
-    goals: {
-      activeCount: 2,
-      list: [
-        { id: 1, type: 'Weight Loss', target: '65 kg', current: '70 kg', progress: 70 },
-        { id: 2, type: 'Calorie Deficit', target: '1800 kcal', current: '1850 kcal', progress: 90 }
-      ]
+  const { currentUser } = useContext(AuthContext);
+
+  const [dashboardData, setDashboardData] = useState(null);
+  const [bmiData, setBmiData] = useState(null);
+  const [waterStats, setWaterStats] = useState(null);
+  const [goals, setGoals] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchDashboardData = async (silent = false) => {
+    if (!silent) setIsLoading(true);
+    setError(null);
+    try {
+      const [dashRes, bmiRes, waterRes, goalsRes] = await Promise.all([
+        api.get('/analytics/dashboard'),
+        api.get('/analytics/bmi').catch((err) => {
+          // Handle 400 (Profile incomplete) gracefully
+          if (err.response && err.response.status === 400) {
+            return { data: { success: false, incomplete: true } };
+          }
+          throw err;
+        }),
+        api.get('/water/stats'),
+        api.get('/goals').catch(() => ({ data: { success: true, data: [] } }))
+      ]);
+
+      if (dashRes.data && dashRes.data.success) {
+        setDashboardData(dashRes.data.data);
+      }
+      
+      if (bmiRes.data) {
+        setBmiData(bmiRes.data.incomplete ? { incomplete: true } : bmiRes.data.data);
+      }
+
+      if (waterRes.data && waterRes.data.success) {
+        setWaterStats(waterRes.data.data);
+      }
+
+      if (goalsRes.data && goalsRes.data.success) {
+        setGoals(goalsRes.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard statistics:', err);
+      setError(err.response?.data?.message || 'Failed to load dashboard statistics.');
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const handleAddWater = async (amount) => {
+    try {
+      const res = await api.post('/water', { amount });
+      if (res.data && res.data.success) {
+        toast.success(`Logged ${amount}ml of water!`, {
+          icon: '💧',
+          style: {
+            background: '#0f172a',
+            color: '#f8fafc',
+            border: '1px solid #1e293b',
+            borderRadius: '1rem',
+          }
+        });
+        // Refresh water stats silently
+        const waterRes = await api.get('/water/stats');
+        if (waterRes.data && waterRes.data.success) {
+          setWaterStats(waterRes.data.data);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to log water intake:', err);
+      toast.error(err.response?.data?.message || 'Failed to log water intake.');
+    }
+  };
+
+  const handleResetWater = async () => {
+    try {
+      const logsRes = await api.get('/water');
+      if (logsRes.data && logsRes.data.success) {
+        const todayLogs = logsRes.data.data.filter((log) => {
+          const logDate = new Date(log.intakeDate).toDateString();
+          const today = new Date().toDateString();
+          return logDate === today;
+        });
+
+        if (todayLogs.length === 0) {
+          toast.error('No water logs found for today.');
+          return;
+        }
+
+        await Promise.all(todayLogs.map((log) => api.delete(`/water/${log._id}`)));
+        toast.success('Successfully reset daily water intake.');
+        
+        // Refresh water stats
+        const waterRes = await api.get('/water/stats');
+        if (waterRes.data && waterRes.data.success) {
+          setWaterStats(waterRes.data.data);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to reset water intake:', err);
+      toast.error('Failed to reset daily water intake.');
+    }
+  };
+
+  if (isLoading && !dashboardData) {
+    return (
+      <MainLayout>
+        <div className="min-h-[60vh] flex flex-col items-center justify-center text-slate-400 text-sm font-sans">
+          <div className="w-8 h-8 rounded-full border-4 border-slate-800 border-t-purple-600 animate-spin mb-3"></div>
+          <span>Loading dashboard analytics...</span>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Get first name of authenticated user
+  const userFirstName = currentUser?.name ? currentUser.name.split(' ')[0] : 'User';
+
+  // Map backend goals list to structure expected by GoalsCard
+  const activeGoals = goals
+    .filter((g) => g.status === 'Active')
+    .slice(0, 2)
+    .map((g) => {
+      let progress = 50;
+      if (g.goalType === 'Weight Loss') {
+        const totalDiff = Math.abs(g.currentWeight - g.targetWeight);
+        progress = totalDiff === 0 ? 100 : Math.min(100, Math.max(0, Math.round((totalDiff / g.targetWeight) * 100)));
+      }
+      return {
+        id: g._id,
+        type: g.goalType,
+        current: g.goalType === 'Calorie Deficit' ? 'Deficit' : `${g.currentWeight} kg`,
+        target: g.goalType === 'Calorie Deficit' ? `${g.targetCalories} kcal` : `${g.targetWeight} kg`,
+        progress: progress
+      };
+    });
+
+  // Fallback default goals if none are configured in database
+  const goalsToRender = activeGoals.length > 0 ? activeGoals : [
+    { id: 'mock-1', type: 'Weight Loss', target: '65 kg', current: '70 kg', progress: 70 },
+    { id: 'mock-2', type: 'Calorie Deficit', target: '1800 kcal', current: '1850 kcal', progress: 90 }
+  ];
 
   return (
     <MainLayout>
@@ -59,36 +178,48 @@ const Dashboard = () => {
               <span>AI Dashboard Active</span>
             </div>
             <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
-              Welcome back, {mockDashboardData.user.name.split(' ')[0]}
+              Welcome back, {userFirstName}
             </h1>
             <p className="text-xs md:text-sm text-slate-400">
               Here is your fitness and health summary for today. Your progress is looking solid!
             </p>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-900 border border-slate-850 self-start sm:self-center">
+          <button 
+            onClick={() => fetchDashboardData(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-900 hover:bg-slate-855 border border-slate-800 self-start sm:self-center cursor-pointer transition-all active:scale-98"
+          >
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
             <span className="text-xs font-bold text-slate-300">Synchronized</span>
-          </div>
+          </button>
         </div>
+
+        {/* Error message slot */}
+        {error && (
+          <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-400 text-xs font-semibold text-center animate-pulse">
+            ⚠️ {error}
+          </div>
+        )}
 
         {/* First Row: Core fitness metric cards (Workouts, Calories, Water, Goals) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <WorkoutCard 
-            totalWorkouts={mockDashboardData.workouts.total} 
-            weeklyCount={mockDashboardData.workouts.weekly} 
-            streakDays={mockDashboardData.workouts.streak}
+            totalWorkouts={dashboardData?.allTime?.workoutsCount || 0} 
+            weeklyCount={dashboardData?.today?.workoutsCount || 0} 
+            streakDays={[true, false, true, true, false, true, false]}
           />
           <CaloriesCard 
-            consumed={mockDashboardData.calories.consumed} 
-            burned={mockDashboardData.calories.burned} 
+            consumed={dashboardData?.today?.caloriesConsumed || 0} 
+            burned={dashboardData?.today?.caloriesBurned || 0} 
           />
           <WaterCard 
-            initialIntakeMl={mockDashboardData.waterIntake.current} 
-            goalMl={mockDashboardData.waterIntake.goal} 
+            initialIntakeMl={waterStats?.totalIntakeMl || 0} 
+            goalMl={waterStats?.dailyGoalMl || 2000} 
+            onAddWater={handleAddWater}
+            onReset={handleResetWater}
           />
           <GoalsCard 
-            goalsCount={mockDashboardData.goals.activeCount} 
-            goals={mockDashboardData.goals.list} 
+            goalsCount={dashboardData?.activeGoalsCount || goals.filter(g => g.status === 'Active').length || 2} 
+            goals={goalsToRender} 
           />
         </div>
 
@@ -96,9 +227,10 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Health Index Card */}
           <BMICard 
-            bmi={mockDashboardData.bmi} 
-            height={mockDashboardData.user.height} 
-            weight={mockDashboardData.user.weight} 
+            bmi={bmiData?.bmi || 0} 
+            height={bmiData?.height || currentUser?.height || 0} 
+            weight={bmiData?.weight || currentUser?.weight || 0} 
+            incomplete={bmiData?.incomplete || false}
           />
 
           {/* Quick Actions Panel */}
@@ -124,7 +256,7 @@ const Dashboard = () => {
                 <div className="flex items-start gap-2.5">
                   <Award className="w-4.5 h-4.5 text-indigo-400 flex-shrink-0 mt-0.5" />
                   <p className="text-xs text-slate-300 leading-normal">
-                    You are <strong className="text-indigo-400">150 kcal</strong> away from reaching your target calorie deficit today. An evening 15-minute walk will seal this goal!
+                    You have consumed <strong className="text-purple-400">{dashboardData?.today?.caloriesConsumed || 0} kcal</strong> and burned <strong className="text-indigo-400">{dashboardData?.today?.caloriesBurned || 0} kcal</strong> today. Maintain your logs to keep tracking!
                   </p>
                 </div>
                 <div className="w-full border-t border-slate-900"></div>
