@@ -5,6 +5,11 @@ import { AuthContext } from '../context/AuthContext';
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
 import Dashboard from '../pages/dashboard/Dashboard';
+import Workouts from '../pages/workouts/Workouts';
+import FoodTracker from '../pages/food/FoodTracker';
+import Goals from '../pages/goals/Goals';
+import WaterTracker from '../pages/water/WaterTracker';
+import Profile from '../pages/profile/Profile';
 
 /**
  * Protective Route wrapper
@@ -91,6 +96,46 @@ const AppRoutes = () => {
           element={
             <PrivateRoute>
               <Dashboard />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/workouts" 
+          element={
+            <PrivateRoute>
+              <Workouts />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/food" 
+          element={
+            <PrivateRoute>
+              <FoodTracker />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/goals" 
+          element={
+            <PrivateRoute>
+              <Goals />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/water" 
+          element={
+            <PrivateRoute>
+              <WaterTracker />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/profile" 
+          element={
+            <PrivateRoute>
+              <Profile />
             </PrivateRoute>
           } 
         />
