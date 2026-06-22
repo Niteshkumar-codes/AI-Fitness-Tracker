@@ -1,26 +1,47 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { AuthContext } from '../context/AuthContext';
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
 import Dashboard from '../pages/dashboard/Dashboard';
 
 /**
- * Protective Route wrapper stub
+ * Protective Route wrapper
  * Purpose: Ensures only authenticated users can visit the enclosed route.
  * Redirects unauthenticated users to /login.
  */
 const PrivateRoute = ({ children }) => {
-  // TODO: Check auth state from AuthContext
-  const isAuthenticated = true; // Placeholder for testing layout
+  const { isAuthenticated, loading } = useContext(AuthContext);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 text-sm font-sans">
+        <div className="w-8 h-8 rounded-full border-4 border-slate-800 border-t-purple-600 animate-spin mb-3"></div>
+        <span>Synchronizing security session...</span>
+      </div>
+    );
+  }
+
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
 /**
- * Public Route wrapper stub (Guest only)
+ * Public Route wrapper (Guest only)
  * Purpose: Redirects already logged-in users away from Login/Register pages.
  */
 const GuestRoute = ({ children }) => {
-  const isAuthenticated = false; // Placeholder
+  const { isAuthenticated, loading } = useContext(AuthContext);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 text-sm font-sans">
+        <div className="w-8 h-8 rounded-full border-4 border-slate-800 border-t-purple-600 animate-spin mb-3"></div>
+        <span>Synchronizing security session...</span>
+      </div>
+    );
+  }
+
   return !isAuthenticated ? children : <Navigate to="/dashboard" replace />;
 };
 
@@ -31,6 +52,20 @@ const GuestRoute = ({ children }) => {
 const AppRoutes = () => {
   return (
     <BrowserRouter>
+      {/* Premium custom dark themed notifications */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          className: 'bg-slate-900 border border-slate-800 text-slate-100 rounded-2xl font-sans',
+          duration: 4000,
+          style: {
+            background: '#0f172a',
+            color: '#f8fafc',
+            border: '1px solid #1e293b',
+            borderRadius: '1rem',
+          },
+        }}
+      />
       <Routes>
         {/* Guest only routes (Auth) */}
         <Route 

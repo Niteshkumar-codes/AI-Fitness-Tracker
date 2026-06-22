@@ -7,6 +7,10 @@ console.log('✅ Environment variables loaded successfully');
 const express = require('express');
 console.log('📦 Express library imported');
 
+// Import CORS library to allow cross-origin requests from the React frontend
+const cors = require('cors');
+console.log('📦 CORS library imported');
+
 // Import the MongoDB connection function
 const connectDB = require('./src/config/db');
 console.log('📦 MongoDB connection function imported');
@@ -40,6 +44,15 @@ const app = express();
 console.log('🚀 Express app instance created');
 
 // ============ MIDDLEWARE CONFIGURATION ============
+// Enable CORS for React frontend running on http://localhost:5173
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  })
+);
+console.log('⚙️  CORS middleware enabled for http://localhost:5173');
+
 // Enable express.json() middleware to parse incoming JSON requests
 // This allows the server to automatically parse JSON request bodies
 app.use(express.json());

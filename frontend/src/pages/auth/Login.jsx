@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
+import toast from 'react-hot-toast';
 
 /**
  * Login Component
@@ -9,26 +12,28 @@ import React, { useState } from 'react';
  * Features:
  * - Local form state management.
  * - Basic client-side email/password validation.
- * - Stylized template using Tailwind CSS v4 grid, forms, and glassmorphism.
- * 
- * Future additions:
- * - Call authService login API.
+ * - Call authService login API via AuthContext.
  * - Save JWT token in AuthContext and LocalStorage.
  * - Redirect authenticated users to /dashboard.
+ * - Stylized template using Tailwind CSS v4 grid, forms, and glassmorphism.
  */
 const Login = () => {
+  const { login } = useContext(AuthContext);
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -38,8 +43,24 @@ const Login = () => {
       return;
     }
 
-    console.log('Login form submitted for:', email);
-    // TODO: Connect login API from AuthContext/Services
+    setIsLoading(true);
+    const toastId = toast.loading('Signing in...');
+    try {
+      const result = await login(email, password);
+      if (result.success) {
+        toast.success(result.message || 'Login successful!', { id: toastId });
+        navigate('/dashboard');
+      } else {
+        setError(result.message || 'Invalid email or password.');
+        toast.error(result.message || 'Invalid email or password.', { id: toastId });
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Login failed. Please try again.';
+      setError(msg);
+      toast.error(msg, { id: toastId });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -56,7 +77,7 @@ const Login = () => {
 
         {/* Error message slot */}
         {error && (
-          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs font-semibold text-center">
+          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs font-semibold text-center animate-pulse">
             ⚠️ {error}
           </div>
         )}
@@ -74,7 +95,8 @@ const Login = () => {
               value={formData.email}
               onChange={handleChange}
               placeholder="e.g. user@domain.com"
-              className="w-full bg-slate-950 border border-slate-900 hover:border-slate-800 focus:border-purple-600 focus:outline-none rounded-xl px-4 py-3 text-sm transition-colors text-slate-200"
+              disabled={isLoading}
+              className="w-full bg-slate-950 border border-slate-900 hover:border-slate-800 focus:border-purple-600 focus:outline-none rounded-xl px-4 py-3 text-sm transition-colors text-slate-200 disabled:opacity-55"
             />
           </div>
 
@@ -89,24 +111,38 @@ const Login = () => {
               value={formData.password}
               onChange={handleChange}
               placeholder="••••••••"
-              className="w-full bg-slate-950 border border-slate-900 hover:border-slate-800 focus:border-purple-600 focus:outline-none rounded-xl px-4 py-3 text-sm transition-colors text-slate-200"
+              disabled={isLoading}
+              className="w-full bg-slate-950 border border-slate-900 hover:border-slate-800 focus:border-purple-600 focus:outline-none rounded-xl px-4 py-3 text-sm transition-colors text-slate-200 disabled:opacity-55"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold text-sm py-3 px-4 rounded-xl mt-2 transition-all hover:shadow-lg hover:shadow-purple-500/20 active:scale-98 cursor-pointer"
+            disabled={isLoading}
+            className={`w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold text-sm py-3 px-4 rounded-xl mt-2 transition-all hover:shadow-lg hover:shadow-purple-500/20 active:scale-98 cursor-pointer flex items-center justify-center gap-2 ${
+              isLoading ? 'opacity-70 cursor-not-allowed' : ''
+            }`}
           >
-            Sign In
+            {isLoading ? (
+              <>
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Signing In...</span>
+              </>
+            ) : (
+              'Sign In'
+            )}
           </button>
         </form>
 
         {/* Navigation link */}
         <p className="text-xs text-center text-slate-500">
           Don't have an account?{' '}
-          <span className="text-purple-400 font-bold hover:underline cursor-pointer">
+          <Link to="/register" className="text-purple-400 font-bold hover:underline cursor-pointer">
             Register here
-          </span>
+          </Link>
         </p>
       </div>
     </div>
