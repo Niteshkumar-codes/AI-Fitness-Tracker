@@ -1,17 +1,43 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import MainLayout from '../../layouts/MainLayout';
 import { AuthContext } from '../../context/AuthContext';
 import { User, Mail, Calendar, Scale, Ruler, LogOut, Shield, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 /**
  * Profile Component
  * Renders the user's personal details, health parameters, and logout options.
+ * Connects to the backend GET /api/auth/profile endpoint.
  */
 const Profile = () => {
-  const { currentUser, logout } = useContext(AuthContext);
+  const { logout } = useContext(AuthContext);
   const navigate = useNavigate();
+
+  const [profile, setProfile] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchProfile = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await api.get('/auth/profile');
+      if (response.data && response.data.success) {
+        setProfile(response.data.user);
+      }
+    } catch (err) {
+      console.error('Failed to load profile:', err);
+      setError(err.response?.data?.message || 'Failed to fetch user profile.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
 
   const handleLogoutClick = () => {
     logout();
@@ -19,13 +45,42 @@ const Profile = () => {
     navigate('/login');
   };
 
-  // Fallback defaults if currentUser is not initialized
-  const user = currentUser || {
-    name: 'Alex Rivera',
-    email: 'alex.rivera@domain.com',
-    height: 175,
-    weight: 70,
-    age: 28,
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="min-h-[60vh] flex flex-col items-center justify-center text-slate-400 text-sm font-sans">
+          <div className="w-8 h-8 rounded-full border-4 border-slate-800 border-t-purple-600 animate-spin mb-3"></div>
+          <span>Synchronizing profile details...</span>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <MainLayout>
+        <div className="flex flex-col gap-6 md:gap-8 max-w-4xl mx-auto items-center justify-center min-h-[50vh]">
+          <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-400 text-xs font-semibold text-center animate-pulse max-w-md w-full">
+            ⚠️ {error}
+          </div>
+          <button 
+            onClick={fetchProfile}
+            className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs cursor-pointer transition-all active:scale-98"
+          >
+            Retry Loading
+          </button>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Fallback defaults if profile is null
+  const user = profile || {
+    name: 'User Name',
+    email: 'user@domain.com',
+    height: null,
+    weight: null,
+    age: null,
     gender: 'prefer not to say',
   };
 
