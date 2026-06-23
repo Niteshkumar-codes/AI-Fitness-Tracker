@@ -158,5 +158,51 @@ export const goalService = {
   }
 };
 
+export const waterService = {
+  /**
+   * Fetch all water logs for the authenticated user
+   * @returns {Promise<Object>} Response containing success status, logs array, and total count
+   */
+  getWaterLogs: async () => {
+    const response = await api.get('/water');
+    return response.data;
+  },
+
+  /**
+   * Fetch daily water stats for the authenticated user
+   * @param {string} [date] - Optional date in YYYY-MM-DD format
+   * @param {number} [goal] - Optional custom daily goal
+   * @returns {Promise<Object>} Response containing success status and statistics data object
+   */
+  getDailyStats: async (date, goal) => {
+    const params = {};
+    if (date) params.date = date;
+    if (goal) params.goal = goal;
+    const response = await api.get('/water/stats', { params });
+    return response.data;
+  },
+
+  /**
+   * Add a new water intake log
+   * @param {Object} waterData - Fields: amount (number), intakeDate (string, optional)
+   * @returns {Promise<Object>} Response containing success status, message, and created water object
+   */
+  addWater: async (waterData) => {
+    const response = await api.post('/water', waterData);
+    return response.data;
+  },
+
+  /**
+   * Delete a water log entry by ID
+   * @param {string} id - Water log document ID to delete
+   * @returns {Promise<Object>} Response containing success status and message
+   */
+  deleteWaterLog: async (id) => {
+    const response = await api.delete(`/water/${id}`);
+    return response.data;
+  }
+};
+
 export default api;
+
 

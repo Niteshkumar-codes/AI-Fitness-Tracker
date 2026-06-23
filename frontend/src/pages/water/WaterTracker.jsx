@@ -1,44 +1,149 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MainLayout from '../../layouts/MainLayout';
-import { Droplet, Plus, Calendar, Coffee, Sparkles } from 'lucide-react';
+import { Droplet, Plus, Coffee, Sparkles, Trash2 } from 'lucide-react';
+import { waterService } from '../../services/api';
 import toast from 'react-hot-toast';
 
 /**
  * WaterTracker Component
  * Renders the water tracking dashboard inside the protected dashboard area.
+ * Connects to live backend API endpoints for retrieving stats/logs, adding logs, and deleting logs.
  */
 const WaterTracker = () => {
-  const [currentIntake, setCurrentIntake] = useState(750);
-  const goal = 2000;
+  const [logs, setLogs] = useState([]);
+  const [stats, setStats] = useState({
+    totalIntakeMl: 0,
+    dailyGoalMl: 2000,
+    progressPercentage: 0,
+    totalGlasses: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const [logs, setLogs] = useState([
-    { id: 1, amount: 250, time: '08:15 AM', type: 'Glass of Water' },
-    { id: 2, amount: 500, time: '11:30 AM', type: 'Sports Bottle' }
-  ]);
+  // Custom amount states
+  const [customAmount, setCustomAmount] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
-  const handleAddWater = (amount) => {
-    setCurrentIntake((prev) => {
-      const next = prev + amount;
-      toast.success(`Added ${amount}ml of water!`, {
-        icon: '💧',
+  // Fetch all data
+  const fetchWaterData = async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const [logsRes, statsRes] = await Promise.all([
+        waterService.getWaterLogs(),
+        waterService.getDailyStats(),
+      ]);
+
+      if (logsRes.success) {
+        // Filter logs to only display today's local date logs
+        const todayStr = new Date().toDateString();
+        const todayLogs = (logsRes.data || []).filter((log) => {
+          return new Date(log.intakeDate).toDateString() === todayStr;
+        });
+        setLogs(todayLogs);
+      }
+
+      if (statsRes.success) {
+        setStats(statsRes.data);
+      }
+    } catch (err) {
+      console.error('Error fetching water data:', err);
+      toast.error('Failed to load hydration statistics.', {
         style: {
           background: '#0f172a',
           color: '#f8fafc',
           border: '1px solid #1e293b',
           borderRadius: '1rem',
-        }
+        },
       });
-      return next;
-    });
-
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    setLogs((prev) => [
-      { id: Date.now(), amount, time, type: amount === 250 ? 'Glass of Water' : amount === 500 ? 'Sports Bottle' : 'Custom Drink' },
-      ...prev
-    ]);
+    } finally {
+      if (!silent) setLoading(false);
+    }
   };
 
-  const progressPercent = Math.min(Math.round((currentIntake / goal) * 100), 100);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchWaterData();
+  }, []);
+
+
+  const handleAddWater = async (amount) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const res = await waterService.addWater({ amount });
+      if (res.success) {
+        toast.success(res.message || `Added ${amount}ml of water!`, {
+          icon: '💧',
+          style: {
+            background: '#0f172a',
+            color: '#f8fafc',
+            border: '1px solid #1e293b',
+            borderRadius: '1rem',
+          },
+        });
+        setCustomAmount('');
+        setShowCustomInput(false);
+        await fetchWaterData(true);
+      }
+    } catch (err) {
+      console.error('Error logging water:', err);
+      toast.error(err.response?.data?.message || 'Failed to log water intake.', {
+        style: {
+          background: '#0f172a',
+          color: '#f8fafc',
+          border: '1px solid #1e293b',
+          borderRadius: '1rem',
+        },
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteLog = async (id) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const res = await waterService.deleteWaterLog(id);
+      if (res.success) {
+        toast.success(res.message || 'Water log entry deleted.', {
+          icon: '🗑️',
+          style: {
+            background: '#0f172a',
+            color: '#f8fafc',
+            border: '1px solid #1e293b',
+            borderRadius: '1rem',
+          },
+        });
+        await fetchWaterData(true);
+      }
+    } catch (err) {
+      console.error('Error deleting log:', err);
+      toast.error(err.response?.data?.message || 'Failed to delete water log.', {
+        style: {
+          background: '#0f172a',
+          color: '#f8fafc',
+          border: '1px solid #1e293b',
+          borderRadius: '1rem',
+        },
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+          <Droplet className="w-10 h-10 text-blue-400 animate-bounce" />
+          <div className="text-slate-400 font-medium text-sm">Loading hydration stats...</div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  const progressPercent = Math.min(Math.round(stats.progressPercentage || 0), 100);
 
   return (
     <MainLayout>
@@ -67,8 +172,10 @@ const WaterTracker = () => {
               {/* Inner details */}
               <div className="flex flex-col items-center text-center z-10">
                 <Droplet className="w-8 h-8 text-blue-400 animate-bounce mb-1" />
-                <span className="text-3xl font-black text-white">{currentIntake}</span>
-                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">/ {goal} ml</span>
+                <span className="text-3xl font-black text-white">{stats.totalIntakeMl}</span>
+                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                  / {stats.dailyGoalMl} ml
+                </span>
               </div>
               {/* Spinning/pulsing highlight ring */}
               <div className="absolute inset-[-4px] rounded-full border-2 border-dashed border-blue-500/20 animate-[spin_40s_linear_infinite]"></div>
@@ -88,21 +195,88 @@ const WaterTracker = () => {
             </div>
 
             {/* Quick Add buttons */}
-            <div className="flex gap-4 mt-2">
-              <button 
-                onClick={() => handleAddWater(250)}
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-200 text-xs font-extrabold hover:text-white transition-all cursor-pointer"
-              >
-                <Plus className="w-4 h-4 text-blue-400" />
-                <span>+250ml Glass</span>
-              </button>
-              <button 
-                onClick={() => handleAddWater(500)}
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-200 text-xs font-extrabold hover:text-white transition-all cursor-pointer"
-              >
-                <Plus className="w-4 h-4 text-blue-400" />
-                <span>+500ml Bottle</span>
-              </button>
+            <div className="flex flex-col items-center gap-4 mt-2 w-full max-w-md">
+              <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full justify-center">
+                <button 
+                  onClick={() => handleAddWater(250)}
+                  disabled={isSubmitting}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-200 text-xs font-extrabold hover:text-white transition-all cursor-pointer disabled:opacity-50 min-w-[120px]"
+                >
+                  <Plus className="w-4 h-4 text-blue-400" />
+                  <span>+250ml Glass</span>
+                </button>
+                <button 
+                  onClick={() => handleAddWater(500)}
+                  disabled={isSubmitting}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-200 text-xs font-extrabold hover:text-white transition-all cursor-pointer disabled:opacity-50 min-w-[120px]"
+                >
+                  <Plus className="w-4 h-4 text-blue-400" />
+                  <span>+500ml Bottle</span>
+                </button>
+                <button 
+                  onClick={() => setShowCustomInput(!showCustomInput)}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border text-xs font-extrabold transition-all cursor-pointer min-w-[120px] ${
+                    showCustomInput 
+                    ? 'bg-blue-500/10 border-blue-500/50 text-blue-400 hover:bg-blue-500/20' 
+                    : 'bg-slate-900 hover:bg-slate-850 border-slate-800 text-slate-200 hover:text-white'
+                  }`}
+                >
+                  <Plus className="w-4 h-4 text-blue-400" />
+                  <span>Custom Amount</span>
+                </button>
+              </div>
+
+              {showCustomInput && (
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const amountVal = parseInt(customAmount, 10);
+                    if (!amountVal || amountVal <= 0) {
+                      toast.error('Please enter a valid positive water amount in ml.');
+                      return;
+                    }
+                    handleAddWater(amountVal);
+                  }}
+                  className="flex items-center gap-2 w-full bg-slate-950/60 p-2 rounded-2xl border border-slate-900 animate-in fade-in slide-in-from-top-2 duration-200"
+                >
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Enter amount (ml)"
+                    value={customAmount}
+                    onChange={(e) => setCustomAmount(e.target.value)}
+                    className="flex-1 bg-transparent px-3 py-2 text-xs font-bold text-white outline-none border-none placeholder:text-slate-600 focus:ring-0"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !customAmount}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-xs font-extrabold transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {isSubmitting ? 'Logging...' : 'Log'}
+                  </button>
+                </form>
+              )}
+            </div>
+
+            {/* Dynamic Stats summary cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full mt-4 border-t border-slate-900/60 pt-6">
+              <div className="p-4 rounded-2xl bg-slate-950/40 border border-slate-900/80 flex flex-col items-center text-center">
+                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Total Intake</span>
+                <span className="text-base font-black text-white mt-1">{stats.totalIntakeMl} ml</span>
+              </div>
+              <div className="p-4 rounded-2xl bg-slate-950/40 border border-slate-900/80 flex flex-col items-center text-center">
+                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Daily Goal</span>
+                <span className="text-base font-black text-white mt-1">{stats.dailyGoalMl} ml</span>
+              </div>
+              <div className="p-4 rounded-2xl bg-slate-950/40 border border-slate-900/80 flex flex-col items-center text-center">
+                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Progress</span>
+                <span className="text-base font-black text-blue-400 mt-1">{stats.progressPercentage}%</span>
+              </div>
+              <div className="p-4 rounded-2xl bg-slate-950/40 border border-slate-900/80 flex flex-col items-center text-center">
+                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Glass Count</span>
+                <span className="text-base font-black text-indigo-400 mt-1">{stats.totalGlasses} 🥛</span>
+              </div>
             </div>
           </div>
 
@@ -124,17 +298,40 @@ const WaterTracker = () => {
                 <Coffee className="w-4 h-4 text-slate-400" />
                 Today's Water Log
               </h3>
-              <div className="flex flex-col gap-3 overflow-y-auto max-h-[180px] pr-1">
+              <div className="flex flex-col gap-3 overflow-y-auto max-h-[220px] pr-1">
                 {logs.length === 0 ? (
-                  <div className="text-center py-6 text-xs text-slate-500">No logs for today. Start drinking!</div>
+                  <div className="text-center py-8 text-xs text-slate-500">
+                    No logs for today. Start drinking!
+                  </div>
                 ) : (
                   logs.map((log) => (
-                    <div key={log.id} className="flex justify-between items-center text-xs p-3 rounded-xl bg-slate-950 border border-slate-900">
+                    <div 
+                      key={log._id} 
+                      className="flex justify-between items-center text-xs p-3 rounded-xl bg-slate-950 border border-slate-900 group"
+                    >
                       <div className="flex flex-col gap-0.5">
-                        <span className="font-bold text-slate-200">{log.type}</span>
-                        <span className="text-[10px] text-slate-500">{log.time}</span>
+                        <span className="font-bold text-slate-200">
+                          {log.amount === 250 
+                            ? 'Glass of Water' 
+                            : log.amount === 500 
+                              ? 'Sports Bottle' 
+                              : 'Custom Hydration'}
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          {new Date(log.intakeDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       </div>
-                      <span className="font-extrabold text-blue-400">+{log.amount} ml</span>
+                      <div className="flex items-center gap-3">
+                        <span className="font-extrabold text-blue-400">+{log.amount} ml</span>
+                        <button
+                          onClick={() => handleDeleteLog(log._id)}
+                          disabled={isSubmitting}
+                          className="text-slate-650 hover:text-red-400 transition-all cursor-pointer md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 disabled:opacity-50 p-1 rounded hover:bg-slate-900"
+                          title="Delete log"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}
@@ -148,3 +345,4 @@ const WaterTracker = () => {
 };
 
 export default WaterTracker;
+
