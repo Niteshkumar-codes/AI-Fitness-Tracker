@@ -85,5 +85,36 @@ export const workoutService = {
   }
 };
 
+export const foodService = {
+  /**
+   * Fetch all food entries for the authenticated user
+   * @returns {Promise<Object>} Response containing success status, food array, and total count
+   */
+  getFoods: async () => {
+    const response = await api.get('/foods');
+    return response.data;
+  },
+
+  /**
+   * Add a new food entry
+   * @param {Object} foodData - Fields: foodName, calories, protein, carbs, fats, mealType, foodDate (optional)
+   * @returns {Promise<Object>} Response containing success status, message, and created food object
+   */
+  addFood: async (foodData) => {
+    const response = await api.post('/foods', foodData);
+    return response.data;
+  },
+
+  /**
+   * Delete a food entry by ID
+   * @param {string} id - Food entry document ID to delete
+   * @returns {Promise<Object>} Response containing success status and message
+   */
+  deleteFood: async (id) => {
+    const response = await api.delete(`/foods/${id}`);
+    return response.data;
+  }
+};
+
 export default api;
 
