@@ -54,4 +54,36 @@ api.interceptors.response.use(
   }
 );
 
+export const workoutService = {
+  /**
+   * Fetch all workouts for the authenticated user
+   * @returns {Promise<Object>} Response containing success status, workouts array, and total count
+   */
+  getWorkouts: async () => {
+    const response = await api.get('/workouts');
+    return response.data;
+  },
+
+  /**
+   * Add a new workout log
+   * @param {Object} workoutData - Fields: workoutType, duration, caloriesBurned, notes, workoutDate (optional)
+   * @returns {Promise<Object>} Response containing success status, message, and created workout object
+   */
+  addWorkout: async (workoutData) => {
+    const response = await api.post('/workouts', workoutData);
+    return response.data;
+  },
+
+  /**
+   * Delete a workout log by ID
+   * @param {string} id - Workout document ID to delete
+   * @returns {Promise<Object>} Response containing success status and message
+   */
+  deleteWorkout: async (id) => {
+    const response = await api.delete(`/workouts/${id}`);
+    return response.data;
+  }
+};
+
 export default api;
+
