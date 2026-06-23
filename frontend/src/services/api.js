@@ -116,5 +116,47 @@ export const foodService = {
   }
 };
 
+export const goalService = {
+  /**
+   * Fetch all goals for the authenticated user
+   * @returns {Promise<Object>} Response containing success status and goals array
+   */
+  getGoals: async () => {
+    const response = await api.get('/goals');
+    return response.data;
+  },
+
+  /**
+   * Add a new goal
+   * @param {Object} goalData - Fields: goalType, targetWeight, currentWeight, targetCalories (optional), targetDate (optional)
+   * @returns {Promise<Object>} Response containing success status and created goal object
+   */
+  addGoal: async (goalData) => {
+    const response = await api.post('/goals', goalData);
+    return response.data;
+  },
+
+  /**
+   * Update an existing goal (e.g. update current weight or completion status)
+   * @param {string} id - Goal document ID to update
+   * @param {Object} goalData - Fields to update
+   * @returns {Promise<Object>} Response containing success status and updated goal object
+   */
+  updateGoal: async (id, goalData) => {
+    const response = await api.put(`/goals/${id}`, goalData);
+    return response.data;
+  },
+
+  /**
+   * Delete a goal by ID
+   * @param {string} id - Goal document ID to delete
+   * @returns {Promise<Object>} Response containing success status and message
+   */
+  deleteGoal: async (id) => {
+    const response = await api.delete(`/goals/${id}`);
+    return response.data;
+  }
+};
+
 export default api;
 
