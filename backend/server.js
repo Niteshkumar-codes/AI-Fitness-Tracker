@@ -39,6 +39,11 @@ console.log('📦 Analytics routes imported');
 const waterRoutes = require('./src/routes/waterRoutes');
 console.log('📦 Water routes imported');
 
+// Import Gemini AI health coach routes
+const aiRoutes = require('./src/routes/aiRoutes');
+console.log('📦 AI routes imported');
+
+
 // Create a new Express application instance
 const app = express();
 console.log('🚀 Express app instance created');
@@ -124,6 +129,14 @@ console.log('📊 Analytics routes registered at /api/analytics');
 //   DELETE /api/water/:id - Delete a specific water log (requires token)
 app.use('/api/water', waterRoutes);
 console.log('💧 Water routes registered at /api/water');
+
+// ============ GEMINI AI HEALTH COACH ROUTES ============
+// Register AI health coach routes
+// Available endpoints:
+//   GET /api/ai/recommendations - Retrieve fitness recommendations (requires token)
+app.use('/api/ai', aiRoutes);
+console.log('🤖 AI Health Coach routes registered at /api/ai');
+
 
 // ============ SERVER STARTUP ============
 // Read the port from environment variables with a fallback to port 5000
