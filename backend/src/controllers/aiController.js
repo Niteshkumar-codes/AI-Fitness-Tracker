@@ -109,7 +109,8 @@ const callGeminiWithRetry = async (model, contents, retries = 3, initialDelay = 
       const result = await model.generateContent(contents);
       return result.response.text();
     } catch (err) {
-      if (i === retries) {
+      const isQuotaExceeded = err.message && (err.message.includes('429') || err.message.toLowerCase().includes('quota'));
+      if (i === retries || isQuotaExceeded) {
         throw err;
       }
       console.warn(`Gemini call failed (attempt ${i + 1}/${retries + 1}), retrying in ${delay}ms... Error: ${err.message}`);
@@ -118,6 +119,15 @@ const callGeminiWithRetry = async (model, contents, retries = 3, initialDelay = 
     }
   }
 };
+
+// List of Gemini models to try in sequence
+const SUPPORTED_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-flash-lite-latest',
+  'gemini-3-flash-preview',
+];
 
 /**
  * Fetch tailored health and fitness recommendations from Gemini AI
@@ -184,7 +194,6 @@ const getRecommendations = async (req, res) => {
 
     // 6. Initialize Gemini Client
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // 7. Construct Prompt with rich data
     const prompt = `You are an expert fitness coach.
@@ -224,8 +233,33 @@ ${workoutsToday.length > 0 ? workoutsToday.map(w => `- ${w.workoutType}: Duratio
 Today's Water Intake:
 - Total Water Intake: ${waterIntakeTotal} ml`;
 
-    // 8. Generate Recommendations using Gemini AI with retry and exponential backoff
-    const recommendationsText = await callGeminiWithRetry(model, prompt);
+    // 8. Generate Recommendations using Gemini AI with fallback models
+    let recommendationsText = null;
+    let selectedModel = null;
+    let lastError = null;
+
+    for (const modelName of SUPPORTED_MODELS) {
+      selectedModel = modelName;
+      try {
+        console.log(`[AI Recommendations] Initializing Gemini call.`);
+        console.log(`[AI Recommendations] Selected Model: ${selectedModel}`);
+        console.log(`[AI Recommendations] Request Payload:\n${prompt}`);
+
+        const model = genAI.getGenerativeModel({ model: selectedModel });
+        recommendationsText = await callGeminiWithRetry(model, prompt);
+
+        console.log(`[AI Recommendations] Gemini Response:\n${recommendationsText}`);
+        console.log(`[AI Recommendations] Successfully generated content using model: ${selectedModel}`);
+        break; // Success! Break out of the loop
+      } catch (err) {
+        lastError = err;
+        console.error(`[AI Recommendations] Model ${selectedModel} failed. Error: ${err.message}`);
+      }
+    }
+
+    if (!recommendationsText) {
+      throw new Error(`All Gemini models failed. Last error: ${lastError ? lastError.message : 'Unknown'}`);
+    }
 
     // 9. Send API Response
     return res.status(200).json({
@@ -304,7 +338,6 @@ const getWorkoutPlan = async (req, res) => {
 
     // 5. Initialize Gemini Client
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // 6. Construct Prompt with user metrics
     const activeGoalsCount = activeGoals.length;
@@ -330,8 +363,34 @@ Active Goals:
 - Active Goals Count: ${activeGoalsCount}
 ${activeGoals.length > 0 ? activeGoals.map(g => `- ${g.goalType}: Target Weight ${g.targetWeight} kg, Current Weight ${g.currentWeight} kg, Target Calories ${g.targetCalories || 'N/A'} kcal`).join('\n') : '- No active goals logged'}`;
 
-    // 7. Generate Workout Plan using Gemini AI with retry and exponential backoff
-    const workoutPlanText = await callGeminiWithRetry(model, prompt);
+    // 7. Generate Workout Plan using Gemini AI with fallback models
+    let workoutPlanText = null;
+    let selectedModel = null;
+    let lastError = null;
+
+    for (const modelName of SUPPORTED_MODELS) {
+      selectedModel = modelName;
+      try {
+        console.log(`[AI Workout Plan] Initializing Gemini call.`);
+        console.log(`[AI Workout Plan] Selected Model: ${selectedModel}`);
+        console.log(`[AI Workout Plan] Request Payload:\n${prompt}`);
+
+        const model = genAI.getGenerativeModel({ model: selectedModel });
+        workoutPlanText = await callGeminiWithRetry(model, prompt);
+
+        console.log(`[AI Workout Plan] Gemini Response:\n${workoutPlanText}`);
+        console.log(`[AI Workout Plan] Successfully generated content using model: ${selectedModel}`);
+        break; // Success! Break out of the loop
+      } catch (err) {
+        lastError = err;
+        console.error(`[AI Workout Plan] Model ${selectedModel} failed. Error: ${err.message}`);
+      }
+    }
+
+    if (!workoutPlanText) {
+      throw new Error(`All Gemini models failed. Last error: ${lastError ? lastError.message : 'Unknown'}`);
+    }
+
 
     // 8. Send API Response
     return res.status(200).json({
