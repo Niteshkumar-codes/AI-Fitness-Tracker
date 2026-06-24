@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react';
 import MainLayout from '../../layouts/MainLayout';
 import { AuthContext } from '../../context/AuthContext';
-import { User, Mail, Calendar, Scale, Ruler, LogOut, Shield, Heart } from 'lucide-react';
+import { User, Mail, Calendar, Scale, Ruler, LogOut, Shield, Heart, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -18,6 +18,110 @@ const Profile = () => {
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Edit Profile States
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    age: '',
+    gender: 'Prefer Not To Say',
+    height: '',
+    weight: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+
+  const handleEditClick = () => {
+    if (profile) {
+      setFormData({
+        name: profile.name || '',
+        age: profile.age || '',
+        gender: profile.gender || 'Prefer Not To Say',
+        height: profile.height || '',
+        weight: profile.weight || '',
+      });
+      setSubmitError(null);
+      setIsEditModalOpen(true);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    // Front-end Validations
+    if (!formData.name || formData.name.trim().length < 2) {
+      setSubmitError('Name must be at least 2 characters.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (formData.age !== '' && formData.age !== null) {
+      const ageNum = Number(formData.age);
+      if (isNaN(ageNum) || ageNum < 13 || ageNum > 120) {
+        setSubmitError('Age must be between 13 and 120.');
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    if (formData.height !== '' && formData.height !== null) {
+      const hNum = Number(formData.height);
+      if (isNaN(hNum) || hNum < 100 || hNum > 250) {
+        setSubmitError('Height must be between 100 cm and 250 cm.');
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    if (formData.weight !== '' && formData.weight !== null) {
+      const wNum = Number(formData.weight);
+      if (isNaN(wNum) || wNum < 20 || wNum > 500) {
+        setSubmitError('Weight must be between 20 kg and 500 kg.');
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    try {
+      const response = await api.put('/auth/profile', {
+        name: formData.name.trim(),
+        age: formData.age === '' ? null : Number(formData.age),
+        gender: formData.gender,
+        height: formData.height === '' ? null : Number(formData.height),
+        weight: formData.weight === '' ? null : Number(formData.weight),
+      });
+
+      if (response.data && response.data.success) {
+        toast.success('Profile updated successfully!', {
+          icon: '✨',
+          style: {
+            background: '#0f172a',
+            color: '#f8fafc',
+            border: '1px solid #1e293b',
+            borderRadius: '1rem',
+          }
+        });
+        setProfile(response.data.user);
+        setIsEditModalOpen(false);
+      }
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+      setSubmitError(err.response?.data?.message || 'Failed to update profile.');
+      toast.error(err.response?.data?.message || 'Failed to update profile.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const fetchProfile = async () => {
     setIsLoading(true);
@@ -118,8 +222,16 @@ const Profile = () => {
             </div>
 
             <button 
+              onClick={handleEditClick}
+              className="mt-6 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-purple-600 hover:bg-purple-500 border border-purple-500 text-white text-sm font-bold transition-all cursor-pointer active:scale-98"
+            >
+              <User className="w-4 h-4" />
+              <span>Edit Profile</span>
+            </button>
+
+            <button 
               onClick={handleLogoutClick}
-              className="mt-6 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 hover:text-red-300 text-sm font-bold transition-all cursor-pointer active:scale-98"
+              className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 hover:text-red-300 text-sm font-bold transition-all cursor-pointer active:scale-98"
             >
               <LogOut className="w-4 h-4" />
               <span>Logout Session</span>
@@ -184,6 +296,133 @@ const Profile = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+            onClick={() => setIsEditModalOpen(false)}
+          ></div>
+
+          {/* Modal Container */}
+          <div className="relative w-full max-w-md p-6 rounded-3xl border border-slate-900 bg-slate-950/95 backdrop-blur-md shadow-2xl flex flex-col gap-5 z-10 animate-in fade-in zoom-in duration-200">
+            <div>
+              <h2 className="text-xl font-extrabold text-white tracking-tight">Edit Profile</h2>
+              <p className="text-xs text-slate-400">Update your personal credentials and health parameters.</p>
+            </div>
+
+            {submitError && (
+              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs font-semibold text-center animate-pulse">
+                ⚠️ {submitError}
+              </div>
+            )}
+
+            <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
+              {/* Name */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase text-slate-500">Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  required
+                  className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-slate-200 text-xs focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all placeholder:text-slate-600"
+                  placeholder="Your Name"
+                />
+              </div>
+
+              {/* Age */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase text-slate-500">Age</label>
+                <input
+                  type="number"
+                  name="age"
+                  value={formData.age}
+                  onChange={handleInputChange}
+                  className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-slate-200 text-xs focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all placeholder:text-slate-600"
+                  placeholder="e.g. 25"
+                  min="13"
+                  max="120"
+                />
+              </div>
+
+              {/* Gender (Dropdown) */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase text-slate-500">Gender</label>
+                <select
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                  className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-slate-200 text-xs focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                >
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                  <option value="Prefer Not To Say">Prefer Not To Say</option>
+                </select>
+              </div>
+
+              {/* Height & Weight */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase text-slate-500">Height (cm)</label>
+                  <input
+                    type="number"
+                    name="height"
+                    value={formData.height}
+                    onChange={handleInputChange}
+                    className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-slate-200 text-xs focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all placeholder:text-slate-600"
+                    placeholder="e.g. 175"
+                    min="100"
+                    max="250"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase text-slate-500">Weight (kg)</label>
+                  <input
+                    type="number"
+                    name="weight"
+                    value={formData.weight}
+                    onChange={handleInputChange}
+                    className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-slate-200 text-xs focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all placeholder:text-slate-600"
+                    placeholder="e.g. 70"
+                    min="20"
+                    max="500"
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="flex-1 py-3 px-4 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-900/50 hover:bg-slate-900 text-slate-300 font-bold text-xs transition-all active:scale-98 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </MainLayout>
   );
 };

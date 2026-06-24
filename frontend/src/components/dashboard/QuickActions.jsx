@@ -8,7 +8,7 @@ import { Dumbbell, Apple, Droplet, Target, Plus } from 'lucide-react';
  * Renders a grid of action buttons that let the user log fitness activities.
  * Standard SaaS shortcut panel layout with Lucide icons.
  */
-const QuickActions = () => {
+const QuickActions = ({ onActionClick }) => {
   const actions = [
     { name: 'Add Workout', icon: Dumbbell, color: 'text-purple-400 bg-purple-500/10 border-purple-500/20 hover:border-purple-500/40 hover:bg-purple-500/15' },
     { name: 'Add Food Log', icon: Apple, color: 'text-red-400 bg-red-500/10 border-red-500/20 hover:border-red-500/40 hover:bg-red-500/15' },
@@ -18,7 +18,9 @@ const QuickActions = () => {
 
   const handleActionClick = (name) => {
     console.log(`Action clicked: ${name}`);
-    // TODO: Open modal forms for adding data
+    if (onActionClick) {
+      onActionClick(name);
+    }
   };
 
   return (

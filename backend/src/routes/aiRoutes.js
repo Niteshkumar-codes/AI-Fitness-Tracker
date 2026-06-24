@@ -27,7 +27,7 @@ const upload = multer({
 });
 
 // Import controller functions
-const { getRecommendations, getWorkoutPlan, analyzeFoodImage } = require('../controllers/aiController');
+const { getRecommendations, getWorkoutPlan, analyzeFoodImage, getHealthScore } = require('../controllers/aiController');
 
 // Import authentication middleware
 const authMiddleware = require('../middleware/authMiddleware');
@@ -52,5 +52,13 @@ router.get('/workout-plan', authMiddleware, getWorkoutPlan);
  * @access  Private
  */
 router.post('/analyze-food-image', authMiddleware, upload.single('image'), analyzeFoodImage);
+
+/**
+ * @route   GET /api/ai/health-score
+ * @desc    Calculate user's AI Health Score out of 100 based on their physical metrics,
+ *          water intake, workout logs, food logging consistency, and active goal progress.
+ * @access  Private
+ */
+router.get('/health-score', authMiddleware, getHealthScore);
 
 module.exports = router;

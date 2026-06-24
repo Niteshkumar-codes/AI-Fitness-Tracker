@@ -6,6 +6,8 @@ import CaloriesCard from '../../components/dashboard/CaloriesCard';
 import WorkoutCard from '../../components/dashboard/WorkoutCard';
 import GoalsCard from '../../components/dashboard/GoalsCard';
 import QuickActions from '../../components/dashboard/QuickActions';
+import HealthScoreCard from '../../components/dashboard/HealthScoreCard';
+import { useNavigate } from 'react-router-dom';
 import { Sparkles, Brain, Award } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
@@ -20,19 +22,46 @@ import toast from 'react-hot-toast';
  */
 const Dashboard = () => {
   const { currentUser } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  const handleQuickAction = (actionName) => {
+    switch (actionName) {
+      case 'Add Workout':
+        navigate('/workouts');
+        break;
+      case 'Add Food Log':
+        navigate('/food');
+        break;
+      case 'Log Water':
+        navigate('/water');
+        break;
+      case 'Create Goal':
+        navigate('/goals');
+        break;
+      default:
+        break;
+    }
+  };
 
   const [dashboardData, setDashboardData] = useState(null);
   const [bmiData, setBmiData] = useState(null);
   const [waterStats, setWaterStats] = useState(null);
   const [goals, setGoals] = useState([]);
+  const [healthScoreData, setHealthScoreData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isHealthScoreLoading, setIsHealthScoreLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [healthScoreError, setHealthScoreError] = useState(null);
 
   const fetchDashboardData = async (silent = false) => {
-    if (!silent) setIsLoading(true);
+    if (!silent) {
+      setIsLoading(true);
+      setIsHealthScoreLoading(true);
+    }
     setError(null);
+    setHealthScoreError(null);
     try {
-      const [dashRes, bmiRes, waterRes, goalsRes] = await Promise.all([
+      const [dashRes, bmiRes, waterRes, goalsRes, healthScoreRes] = await Promise.all([
         api.get('/analytics/dashboard'),
         api.get('/analytics/bmi').catch((err) => {
           // Handle 400 (Profile incomplete) gracefully
@@ -42,7 +71,11 @@ const Dashboard = () => {
           throw err;
         }),
         api.get('/water/stats'),
-        api.get('/goals').catch(() => ({ data: { success: true, data: [] } }))
+        api.get('/goals').catch(() => ({ data: { success: true, data: [] } })),
+        api.get('/ai/health-score').catch((err) => {
+          console.error('Error fetching health score:', err);
+          return { data: { success: false, error: err.response?.data?.message || 'Failed to load health score.' } };
+        })
       ]);
 
       if (dashRes.data && dashRes.data.success) {
@@ -60,11 +93,18 @@ const Dashboard = () => {
       if (goalsRes.data && goalsRes.data.success) {
         setGoals(goalsRes.data.data);
       }
+
+      if (healthScoreRes.data && healthScoreRes.data.success) {
+        setHealthScoreData(healthScoreRes.data.data);
+      } else if (healthScoreRes.data && healthScoreRes.data.error) {
+        setHealthScoreError(healthScoreRes.data.error);
+      }
     } catch (err) {
       console.error('Error fetching dashboard statistics:', err);
       setError(err.response?.data?.message || 'Failed to load dashboard statistics.');
     } finally {
       setIsLoading(false);
+      setIsHealthScoreLoading(false);
     }
   };
 
@@ -90,6 +130,13 @@ const Dashboard = () => {
         if (waterRes.data && waterRes.data.success) {
           setWaterStats(waterRes.data.data);
         }
+        // Refresh health score silently
+        api.get('/ai/health-score').then((hRes) => {
+          if (hRes.data && hRes.data.success) {
+            setHealthScoreData(hRes.data.data);
+            setHealthScoreError(null);
+          }
+        }).catch(err => console.error(err));
       }
     } catch (err) {
       console.error('Failed to log water intake:', err);
@@ -120,6 +167,13 @@ const Dashboard = () => {
         if (waterRes.data && waterRes.data.success) {
           setWaterStats(waterRes.data.data);
         }
+        // Refresh health score silently
+        api.get('/ai/health-score').then((hRes) => {
+          if (hRes.data && hRes.data.success) {
+            setHealthScoreData(hRes.data.data);
+            setHealthScoreError(null);
+          }
+        }).catch(err => console.error(err));
       }
     } catch (err) {
       console.error('Failed to reset water intake:', err);
@@ -224,7 +278,17 @@ const Dashboard = () => {
         </div>
 
         {/* Second Row: Detailed analytics, actions, and AI insights */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* AI Health Score Card */}
+          <HealthScoreCard
+            score={healthScoreData?.healthScore || 0}
+            status={healthScoreData?.status || 'N/A'}
+            strengths={healthScoreData?.strengths || []}
+            improvements={healthScoreData?.improvements || []}
+            isLoading={isHealthScoreLoading}
+            error={healthScoreError}
+          />
+
           {/* Health Index Card */}
           <BMICard 
             bmi={bmiData?.bmi || 0} 
@@ -234,7 +298,7 @@ const Dashboard = () => {
           />
 
           {/* Quick Actions Panel */}
-          <QuickActions />
+          <QuickActions onActionClick={handleQuickAction} />
 
           {/* AI Insights Card (Mock intelligence feedback) */}
           <div className="p-6 rounded-3xl border border-slate-900 bg-gradient-to-br from-indigo-950/20 via-slate-900/30 to-purple-950/20 backdrop-blur-md relative overflow-hidden group hover:border-slate-800 transition-all duration-300 flex flex-col justify-between">

@@ -207,9 +207,127 @@ const getProfile = async (req, res) => {
   }
 };
 
+/**
+ * Update authenticated user's profile
+ * PUT /api/auth/profile
+ * Requires valid JWT token in Authorization header
+ */
+const updateProfile = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { name, age, gender, height, weight } = req.body;
+
+    // Validate name
+    if (name !== undefined) {
+      if (typeof name !== 'string' || name.trim().length < 2) {
+        return res.status(400).json({
+          success: false,
+          message: 'Name must be at least 2 characters.',
+        });
+      }
+    }
+
+    // Validate age
+    if (age !== undefined && age !== null && age !== '') {
+      const numAge = Number(age);
+      if (isNaN(numAge) || numAge < 13 || numAge > 120) {
+        return res.status(400).json({
+          success: false,
+          message: 'Age must be between 13 and 120.',
+        });
+      }
+    }
+
+    // Validate height
+    if (height !== undefined && height !== null && height !== '') {
+      const numHeight = Number(height);
+      if (isNaN(numHeight) || numHeight < 100 || numHeight > 250) {
+        return res.status(400).json({
+          success: false,
+          message: 'Height must be between 100 cm and 250 cm.',
+        });
+      }
+    }
+
+    // Validate weight
+    if (weight !== undefined && weight !== null && weight !== '') {
+      const numWeight = Number(weight);
+      if (isNaN(numWeight) || numWeight < 20 || numWeight > 500) {
+        return res.status(400).json({
+          success: false,
+          message: 'Weight must be between 20 kg and 500 kg.',
+        });
+      }
+    }
+
+    // Validate gender
+    if (gender !== undefined && gender !== null) {
+      const normalizedGender = String(gender).trim().toLowerCase();
+      const validGenders = ['male', 'female', 'other', 'prefer not to say'];
+      if (!validGenders.includes(normalizedGender)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid gender value. Supported: Male, Female, Other, Prefer Not To Say',
+        });
+      }
+    }
+
+    // Find the user to update
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.',
+      });
+    }
+
+    // Update fields
+    if (name !== undefined) user.name = name.trim();
+    if (age !== undefined) {
+      user.age = (age === null || age === '') ? null : Number(age);
+    }
+    if (gender !== undefined) {
+      user.gender = gender;
+    }
+    if (height !== undefined) {
+      user.height = (height === null || height === '') ? null : Number(height);
+    }
+    if (weight !== undefined) {
+      user.weight = (weight === null || weight === '') ? null : Number(weight);
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully.',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        age: user.age,
+        gender: user.gender,
+        height: user.height,
+        weight: user.weight,
+        profileImage: user.profileImage,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error('Error in updateProfile:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Error updating profile',
+      error: error.message,
+    });
+  }
+};
+
 // Export all authentication controller functions
 module.exports = {
   registerUser,
   loginUser,
   getProfile,
+  updateProfile,
 };

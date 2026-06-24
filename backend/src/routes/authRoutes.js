@@ -6,6 +6,7 @@ const {
   registerUser,
   loginUser,
   getProfile,
+  updateProfile,
 } = require('../controllers/authController');
 
 // Import authentication middleware for protected routes
@@ -34,6 +35,13 @@ router.post('/login', loginUser);
  * Protected route (requires valid JWT token)
  */
 router.get('/profile', authMiddleware, getProfile);
+
+/**
+ * PUT /api/auth/profile
+ * Update authenticated user's profile parameters
+ * Protected route (requires valid JWT token)
+ */
+router.put('/profile', authMiddleware, updateProfile);
 
 // Export the router for use in server.js
 module.exports = router;
