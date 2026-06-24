@@ -133,6 +133,101 @@ Today's Water Intake:
   }
 };
 
+/**
+ * Generate a personalized 7-day workout plan using Gemini AI
+ * GET /api/ai/workout-plan
+ */
+const getWorkoutPlan = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    // 1. Fetch user profile
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User profile not found. Please log in again.',
+      });
+    }
+
+    // 2. Fetch user's active goals
+    const activeGoals = await Goal.find({ user: userId, status: 'Active' });
+
+    // 3. Calculate BMI (Body Mass Index): weight (kg) / (height (m) ^ 2)
+    let roundedBmi = null;
+    if (user.height && user.weight) {
+      const heightInMeters = user.height / 100;
+      const bmi = user.weight / (heightInMeters * heightInMeters);
+      roundedBmi = parseFloat(bmi.toFixed(2));
+    }
+
+    // 4. Check if API Key is configured in environment
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({
+        success: false,
+        message: 'AI workout planning is currently unavailable. Gemini API key is not configured.',
+      });
+    }
+
+    // 5. Initialize Gemini Client
+    const genAI = new GoogleGenerativeAI(apiKey);
+
+    // 6. Construct Prompt with user metrics
+    const activeGoalsCount = activeGoals.length;
+    const prompt = `You are a certified fitness trainer.
+
+Generate a personalized 7-day workout plan.
+
+Include:
+- Daily workout
+- Duration
+- Intensity
+- Rest days
+- Beginner-friendly notes
+
+Return structured plain text.
+
+User's Fitness Data:
+- Height: ${user.height ? `${user.height} cm` : 'Not provided'}
+- Weight: ${user.weight ? `${user.weight} kg` : 'Not provided'}
+- Calculated BMI: ${roundedBmi !== null ? roundedBmi : 'Not available (profile height/weight incomplete)'}
+
+Active Goals:
+- Active Goals Count: ${activeGoalsCount}
+${activeGoals.length > 0 ? activeGoals.map(g => `- ${g.goalType}: Target Weight ${g.targetWeight} kg, Current Weight ${g.currentWeight} kg, Target Calories ${g.targetCalories || 'N/A'} kcal`).join('\n') : '- No active goals logged'}`;
+
+    // 7. Generate Workout Plan using Gemini AI (with fallback to gemini-2.5-flash-lite)
+    let workoutPlanText;
+    try {
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const result = await model.generateContent(prompt);
+      workoutPlanText = result.response.text();
+    } catch (error) {
+      console.warn('Gemini 2.5 Flash failed or busy, trying fallback to Gemini 2.5 Flash Lite:', error.message);
+      const fallbackModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+      const result = await fallbackModel.generateContent(prompt);
+      workoutPlanText = result.response.text();
+    }
+
+    // 8. Send API Response
+    return res.status(200).json({
+      success: true,
+      data: {
+        workoutPlan: workoutPlanText,
+      },
+    });
+  } catch (error) {
+    console.error('Error in Gemini AI Workout Plan controller:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while generating workout plan.',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getRecommendations,
+  getWorkoutPlan,
 };

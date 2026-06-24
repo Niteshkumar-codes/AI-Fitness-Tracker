@@ -10,7 +10,7 @@ const express = require('express');
 const router = express.Router();
 
 // Import controller functions
-const { getRecommendations } = require('../controllers/aiController');
+const { getRecommendations, getWorkoutPlan } = require('../controllers/aiController');
 
 // Import authentication middleware
 const authMiddleware = require('../middleware/authMiddleware');
@@ -21,5 +21,12 @@ const authMiddleware = require('../middleware/authMiddleware');
  * @access  Private
  */
 router.get('/recommendations', authMiddleware, getRecommendations);
+
+/**
+ * @route   GET /api/ai/workout-plan
+ * @desc    Fetch personalized 7-day workout plan from Gemini AI
+ * @access  Private
+ */
+router.get('/workout-plan', authMiddleware, getWorkoutPlan);
 
 module.exports = router;
