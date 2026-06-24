@@ -1,16 +1,33 @@
-/**
- * src/routes/aiRoutes.js
- * 
- * Express routes for Gemini AI Health Coach module
- * Defines endpoints for obtaining AI health and fitness recommendations.
- * Secured using existing authMiddleware.
- */
-
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Ensure uploads folder exists
+const uploadsDir = path.join(__dirname, '../../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Multer storage configuration
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
 
 // Import controller functions
-const { getRecommendations, getWorkoutPlan } = require('../controllers/aiController');
+const { getRecommendations, getWorkoutPlan, analyzeFoodImage } = require('../controllers/aiController');
 
 // Import authentication middleware
 const authMiddleware = require('../middleware/authMiddleware');
@@ -28,5 +45,12 @@ router.get('/recommendations', authMiddleware, getRecommendations);
  * @access  Private
  */
 router.get('/workout-plan', authMiddleware, getWorkoutPlan);
+
+/**
+ * @route   POST /api/ai/analyze-food-image
+ * @desc    Analyze a food image and return nutritional values using Gemini Vision
+ * @access  Private
+ */
+router.post('/analyze-food-image', authMiddleware, upload.single('image'), analyzeFoodImage);
 
 module.exports = router;

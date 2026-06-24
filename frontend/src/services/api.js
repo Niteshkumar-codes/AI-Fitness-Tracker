@@ -218,6 +218,18 @@ export const aiService = {
   getWorkoutPlan: async () => {
     const response = await api.get('/ai/workout-plan');
     return response.data;
+  },
+
+  /**
+   * Analyze food image using Gemini Vision
+   */
+  analyzeFoodImage: async (formData) => {
+    const response = await api.post('/ai/analyze-food-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
   }
 };
 

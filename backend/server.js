@@ -63,6 +63,11 @@ console.log('⚙️  CORS middleware enabled for http://localhost:5173');
 app.use(express.json());
 console.log('⚙️  JSON middleware enabled');
 
+// Register static serving for uploads directory
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+console.log('⚙️  Static uploads serving middleware enabled');
+
 // ============ ROUTES ============
 // Define a GET route for the root path '/' that serves as a health check
 // This route returns a JSON response indicating the server is running

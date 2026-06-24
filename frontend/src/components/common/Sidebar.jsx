@@ -10,7 +10,8 @@ import {
   LogOut, 
   ChevronLeft, 
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Camera
 } from 'lucide-react';
 
 /**
@@ -42,6 +43,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
     { name: 'Goals', path: '/goals', icon: Target },
     { name: 'Water Tracker', path: '/water', icon: Droplet },
     { name: 'AI Coach', path: '/ai-coach', icon: Sparkles },
+    { name: 'AI Food Analyzer', path: '/ai-food-analyzer', icon: Camera },
     { name: 'Profile', path: '/profile', icon: User },
   ];
 
