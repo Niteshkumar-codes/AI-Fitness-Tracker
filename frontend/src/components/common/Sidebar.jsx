@@ -41,6 +41,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
     { name: 'Food Tracker', path: '/food', icon: Utensils },
     { name: 'Goals', path: '/goals', icon: Target },
     { name: 'Water Tracker', path: '/water', icon: Droplet },
+    { name: 'AI Coach', path: '/ai-coach', icon: Sparkles },
     { name: 'Profile', path: '/profile', icon: User },
   ];
 

@@ -10,6 +10,7 @@ import FoodTracker from '../pages/food/FoodTracker';
 import Goals from '../pages/goals/Goals';
 import WaterTracker from '../pages/water/WaterTracker';
 import Profile from '../pages/profile/Profile';
+import AICoach from '../pages/ai/AICoach';
 
 /**
  * Protective Route wrapper
@@ -136,6 +137,14 @@ const AppRoutes = () => {
           element={
             <PrivateRoute>
               <Profile />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/ai-coach" 
+          element={
+            <PrivateRoute>
+              <AICoach />
             </PrivateRoute>
           } 
         />

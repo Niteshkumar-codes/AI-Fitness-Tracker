@@ -203,6 +203,24 @@ export const waterService = {
   }
 };
 
+export const aiService = {
+  /**
+   * Fetch health recommendations from Gemini AI (with fallback support)
+   */
+  getRecommendations: async () => {
+    const response = await api.get('/ai/recommendations');
+    return response.data;
+  },
+
+  /**
+   * Fetch 7-day workout plan from Gemini AI (with fallback support)
+   */
+  getWorkoutPlan: async () => {
+    const response = await api.get('/ai/workout-plan');
+    return response.data;
+  }
+};
+
 export default api;
 
 
