@@ -581,8 +581,213 @@ Only output valid JSON.`;
   }
 };
 
+/**
+ * Calculate user's AI Health Score out of 100 based on five metrics (20 points each):
+ * 1. BMI (20 points)
+ * 2. Water Intake (20 points)
+ * 3. Workout Activity (20 points)
+ * 4. Food Tracking Consistency (20 points)
+ * 5. Goal Progress (20 points)
+ * 
+ * GET /api/ai/health-score
+ */
+const getHealthScore = async (req, res) => {
+  try {
+    const userId = req.userId;
+    
+    // Fetch user profile information
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User profile not found. Please log in again.',
+      });
+    }
+
+    // Set daily time bounds (local server day)
+    const targetDate = new Date();
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Set weekly time bounds (last 7 days, including today)
+    const startOfSevenDaysAgo = new Date(startOfDay);
+    startOfSevenDaysAgo.setDate(startOfSevenDaysAgo.getDate() - 6);
+
+    // Query required data concurrently
+    const [workoutsWeek, foodWeek, waterToday, activeGoals] = await Promise.all([
+      Workout.find({ user: userId, workoutDate: { $gte: startOfSevenDaysAgo, $lte: endOfDay } }),
+      Food.find({ user: userId, foodDate: { $gte: startOfSevenDaysAgo, $lte: endOfDay } }),
+      Water.find({ user: userId, intakeDate: { $gte: startOfDay, $lte: endOfDay } }),
+      Goal.find({ user: userId, status: 'Active' }),
+    ]);
+
+    const strengths = [];
+    const improvements = [];
+
+    // ==========================================
+    // 1. BMI calculation (20 points max)
+    // ==========================================
+    let bmiScore = 0;
+    if (user.height && user.weight) {
+      const heightInMeters = user.height / 100;
+      const bmi = user.weight / (heightInMeters * heightInMeters);
+      const roundedBmi = parseFloat(bmi.toFixed(1));
+
+      if (roundedBmi >= 18.5 && roundedBmi < 25.0) {
+        bmiScore = 20;
+        strengths.push('Healthy BMI');
+      } else if ((roundedBmi >= 17.5 && roundedBmi < 18.5) || (roundedBmi >= 25.0 && roundedBmi < 30.0)) {
+        bmiScore = 15;
+        improvements.push(`BMI is slightly outside the healthy range (${roundedBmi}). Aim for a balanced weight.`);
+      } else {
+        bmiScore = 10;
+        improvements.push(`BMI indicates underweight or obesity range (${roundedBmi}). Seek professional guidance.`);
+      }
+    } else {
+      bmiScore = 0;
+      improvements.push('Complete height and weight in your profile to calculate BMI.');
+    }
+
+    // ==========================================
+    // 2. Water Intake calculation (20 points max)
+    // ==========================================
+    const waterIntakeTotal = waterToday.reduce((sum, w) => sum + w.amount, 0);
+    let waterScore = 0;
+    if (waterIntakeTotal >= 2000) {
+      waterScore = 20;
+      strengths.push('Consistent hydration');
+    } else if (waterIntakeTotal >= 1000) {
+      waterScore = 12;
+      improvements.push(`Increase water intake; you logged ${waterIntakeTotal} ml today (target: 2000 ml).`);
+    } else if (waterIntakeTotal > 0) {
+      waterScore = 6;
+      improvements.push(`Drink more water; logged only ${waterIntakeTotal} ml today (target: 2000 ml).`);
+    } else {
+      waterScore = 0;
+      improvements.push('No water logged today. Try to drink at least 2000 ml daily.');
+    }
+
+    // ==========================================
+    // 3. Workout Activity calculation (20 points max)
+    // ==========================================
+    const workoutCount = workoutsWeek.length;
+    let workoutScore = 0;
+    if (workoutCount >= 3) {
+      workoutScore = 20;
+      strengths.push(`Active workout routine (${workoutCount} workouts this week)`);
+    } else if (workoutCount === 2) {
+      workoutScore = 15;
+      improvements.push('Complete 1 more workout this week');
+    } else if (workoutCount === 1) {
+      workoutScore = 10;
+      improvements.push('Complete 2 more workouts this week');
+    } else {
+      workoutScore = 0;
+      improvements.push('No workouts logged in the last 7 days. Aim for at least 3 workouts weekly.');
+    }
+
+    // ==========================================
+    // 4. Food Tracking Consistency (20 points max)
+    // ==========================================
+    const uniqueFoodDays = new Set(
+      foodWeek.map(f => {
+        const d = new Date(f.foodDate);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      })
+    );
+    const foodDaysCount = uniqueFoodDays.size;
+    let foodScore = 0;
+    if (foodDaysCount >= 5) {
+      foodScore = 20;
+      strengths.push('Consistent food tracking');
+    } else if (foodDaysCount >= 3) {
+      foodScore = 15;
+      improvements.push(`Log your meals more consistently (logged ${foodDaysCount} days this week).`);
+    } else if (foodDaysCount >= 1) {
+      foodScore = 10;
+      improvements.push(`Try to log your meals daily (logged ${foodDaysCount} days this week).`);
+    } else {
+      foodScore = 0;
+      improvements.push('Start logging your daily meals to track your nutrition.');
+    }
+
+    // Protein intake check for today (if they logged food today)
+    const foodToday = foodWeek.filter(f => {
+      const d = new Date(f.foodDate);
+      return d >= startOfDay && d <= endOfDay;
+    });
+    if (foodToday.length > 0) {
+      const proteinToday = foodToday.reduce((sum, f) => sum + (f.protein || 0), 0);
+      if (proteinToday < 50) {
+        improvements.push('Increase protein intake');
+      }
+    }
+
+    // ==========================================
+    // 5. Goal Progress calculation (20 points max)
+    // ==========================================
+    let goalScore = 0;
+    if (activeGoals.length > 0) {
+      const activeGoal = activeGoals[0];
+      const targetWeight = activeGoal.targetWeight;
+      const currentWeight = user.weight || activeGoal.currentWeight;
+      const weightDiff = Math.abs(currentWeight - targetWeight);
+
+      if (weightDiff <= 1) {
+        goalScore = 20;
+        strengths.push('On track with weight goal');
+      } else if (weightDiff <= 3) {
+        goalScore = 15;
+        improvements.push('Within 3 kg of target weight; continue with your consistency.');
+      } else if (weightDiff <= 5) {
+        goalScore = 10;
+        improvements.push('Within 5 kg of target weight; stay focused on your target.');
+      } else {
+        goalScore = 5;
+        improvements.push(`Keep working towards your target weight of ${targetWeight} kg (currently ${weightDiff.toFixed(1)} kg away).`);
+      }
+    } else {
+      goalScore = 0;
+      improvements.push('Set an active fitness goal to track progress.');
+    }
+
+    // Calculate overall health score
+    const healthScore = bmiScore + waterScore + workoutScore + foodScore + goalScore;
+
+    // Determine health score status category
+    let status = 'Needs Improvement';
+    if (healthScore >= 85) {
+      status = 'Excellent';
+    } else if (healthScore >= 70) {
+      status = 'Good';
+    } else if (healthScore >= 50) {
+      status = 'Fair';
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        healthScore,
+        status,
+        strengths,
+        improvements,
+      },
+    });
+  } catch (error) {
+    console.error('Error in getHealthScore:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while calculating health score.',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getRecommendations,
   getWorkoutPlan,
   analyzeFoodImage,
+  getHealthScore,
 };
