@@ -49,11 +49,11 @@ const app = express();
 console.log('🚀 Express app instance created');
 
 // ============ MIDDLEWARE CONFIGURATION ============
-// Enable CORS for allowed origins: http://localhost:5173 and the deployed Vercel app
+// Enable CORS for allowed origins: http://localhost:5173 and the deployed production app
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://ai-fitness-tracker-henna.vercel.app'
-];
+  process.env.FRONTEND_URL
+].filter(Boolean);
 
 app.use(
   cors({
