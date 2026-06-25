@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Bell, Search, Menu, ChevronDown, User, Settings, LogOut } from 'lucide-react';
+import { AuthContext } from '../../context/AuthContext';
 
 /**
  * Navbar Component
@@ -12,6 +13,7 @@ import { Bell, Search, Menu, ChevronDown, User, Settings, LogOut } from 'lucide-
  * - setIsMobileOpen: State setter to trigger mobile sidebar drawer.
  */
 const Navbar = ({ setIsMobileOpen }) => {
+  const { currentUser } = useContext(AuthContext);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifications, setNotifications] = useState([
     { id: 1, message: 'You reached your water target yesterday! 💧', unread: true },
@@ -117,11 +119,11 @@ const Navbar = ({ setIsMobileOpen }) => {
           >
             {/* Avatar Pill */}
             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center font-bold text-white text-xs shadow-md shadow-purple-500/10">
-              U
+              {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
             </div>
             <div className="hidden sm:block">
-              <span className="font-semibold text-slate-200 text-xs block leading-none">Alex Rivera</span>
-              <span className="text-[9px] text-slate-500 leading-none">Premium Plan</span>
+              <span className="font-semibold text-slate-200 text-xs block leading-none">{currentUser?.name || 'User'}</span>
+              <span className="text-[9px] text-slate-500 leading-none">Fitness Member</span>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
           </button>
