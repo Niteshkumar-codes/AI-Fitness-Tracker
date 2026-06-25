@@ -11,7 +11,8 @@ import {
   ChevronLeft, 
   ChevronRight,
   Sparkles,
-  Camera
+  Camera,
+  MessageSquare
 } from 'lucide-react';
 
 /**
@@ -44,6 +45,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
     { name: 'Water Tracker', path: '/water', icon: Droplet },
     { name: 'AI Coach', path: '/ai-coach', icon: Sparkles },
     { name: 'AI Food Analyzer', path: '/ai-food-analyzer', icon: Camera },
+    { name: 'AI Chat Assistant', path: '/ai-chat', icon: MessageSquare },
     { name: 'Profile', path: '/profile', icon: User },
   ];
 

@@ -27,7 +27,7 @@ const upload = multer({
 });
 
 // Import controller functions
-const { getRecommendations, getWorkoutPlan, analyzeFoodImage, getHealthScore } = require('../controllers/aiController');
+const { getRecommendations, getWorkoutPlan, analyzeFoodImage, getHealthScore, chatWithAi } = require('../controllers/aiController');
 
 // Import authentication middleware
 const authMiddleware = require('../middleware/authMiddleware');
@@ -60,5 +60,12 @@ router.post('/analyze-food-image', authMiddleware, upload.single('image'), analy
  * @access  Private
  */
 router.get('/health-score', authMiddleware, getHealthScore);
+
+/**
+ * @route   POST /api/ai/chat
+ * @desc    Chat with FitAI Assistant
+ * @access  Private
+ */
+router.post('/chat', authMiddleware, chatWithAi);
 
 module.exports = router;

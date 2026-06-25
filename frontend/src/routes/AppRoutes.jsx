@@ -12,6 +12,7 @@ import WaterTracker from '../pages/water/WaterTracker';
 import Profile from '../pages/profile/Profile';
 import AICoach from '../pages/ai/AICoach';
 import AIFoodAnalyzer from '../pages/ai/AIFoodAnalyzer';
+import AIChatAssistant from '../pages/ai/AIChatAssistant';
 
 /**
  * Protective Route wrapper
@@ -154,6 +155,14 @@ const AppRoutes = () => {
           element={
             <PrivateRoute>
               <AIFoodAnalyzer />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/ai-chat" 
+          element={
+            <PrivateRoute>
+              <AIChatAssistant />
             </PrivateRoute>
           } 
         />

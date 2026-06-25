@@ -785,9 +785,205 @@ const getHealthScore = async (req, res) => {
   }
 };
 
+// Local chat reply generation helper
+const generateLocalFallbackChatReply = (user, workouts, food, water, goals, userMessage) => {
+  const query = (userMessage || '').toLowerCase();
+  
+  let reply = `Hello ${user.name || 'User'}! I am FitAI, your fitness assistant. Our AI servers are currently busy, but here is some personalized advice based on your profile and activity:
+
+Your Profile:
+- Name: ${user.name || 'User'}
+- Age: ${user.age ? `${user.age} years` : 'Not provided'}
+- Gender: ${user.gender || 'Not provided'}
+- Height: ${user.height ? `${user.height} cm` : 'Not provided'}
+- Weight: ${user.weight ? `${user.weight} kg` : 'Not provided'}
+
+Today's Activity:
+- Workouts: ${workouts.length > 0 ? `${workouts.length} workouts logged` : 'No workouts logged today'}
+- Nutrition: ${food.length > 0 ? `${food.reduce((sum, f) => sum + f.calories, 0)} kcal consumed` : 'No meals logged today'}
+- Hydration: ${water.reduce((sum, w) => sum + w.amount, 0)} ml of water logged`;
+
+  if (goals.length > 0) {
+    reply += `\n- Active Goals: ${goals.map(g => `${g.goalType} (Target: ${g.targetWeight} kg)`).join(', ')}`;
+  }
+
+  reply += `\n\nBased on your message: "${userMessage}"\n`;
+
+  if (query.includes('muscle') || query.includes('gain') || query.includes('bulk')) {
+    reply += `\n**Muscle Gain Advice:**\n- Aim for a caloric surplus: consume slightly more calories than you burn (approx. 200-300 kcal above maintenance).\n- Prioritize protein intake: aim for 1.6 to 2.2 grams of protein per kilogram of body weight daily.\n- Focus on progressive overload in resistance training, hitting major muscle groups 2-3 times per week.\n- Ensure adequate rest and 7-9 hours of sleep for muscle recovery.`;
+  } else if (query.includes('lose') || query.includes('fat') || query.includes('weight') || query.includes('slim')) {
+    reply += `\n**Weight / Fat Loss Advice:**\n- Aim for a caloric deficit: consume fewer calories than your Total Daily Energy Expenditure (TDEE). A safe target is a 300-500 kcal deficit.\n- Continue strength training to preserve muscle mass while losing fat.\n- Eat high-satiety foods, including vegetables, fruits, and lean proteins.\n- Stay hydrated and monitor your daily calorie intake.`;
+  } else if (query.includes('water') || query.includes('hydrate') || query.includes('drink')) {
+    reply += `\n**Hydration Advice:**\n- Drink at least 2000-3000 ml of water daily, especially on workout days.\n- Sip water consistently throughout the day rather than chugging large amounts at once.\n- Monitor urine color: pale yellow is generally a good indicator of proper hydration.`;
+  } else if (query.includes('food') || query.includes('diet') || query.includes('eat') || query.includes('meal')) {
+    reply += `\n**Nutrition Advice:**\n- Focus on whole foods: lean proteins, complex carbohydrates, healthy fats, and fiber-rich vegetables.\n- Try to track your meals consistently to stay aware of your calorie and macronutrient intake.\n- Avoid heavily processed foods and sugary beverages.`;
+  } else {
+    reply += `\n**General Fitness Advice:**\n- Consistency is key. Try to exercise 3-5 times a week, combining strength training and cardiovascular activity.\n- Keep track of your food and water intake to build healthy long-term habits.\n- Listen to your body and incorporate rest/recovery days to prevent injuries and burnout.`;
+  }
+
+  return reply;
+};
+
+/**
+ * Chat with FitAI Assistant
+ * POST /api/ai/chat
+ */
+const chatWithAi = async (req, res) => {
+  let user, workoutsToday, foodToday, waterToday, activeGoals;
+  const { message } = req.body;
+
+  try {
+    // 1. Validate request message
+    if (!message || typeof message !== 'string' || message.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid message.',
+      });
+    }
+
+    const userId = req.userId;
+
+    // 2. Fetch user profile
+    user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User profile not found. Please log in again.',
+      });
+    }
+
+    // 3. Setup today's start and end times in local server time
+    const targetDate = new Date();
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // 4. Query all user logs concurrently
+    [workoutsToday, foodToday, waterToday, activeGoals] = await Promise.all([
+      Workout.find({ user: userId, workoutDate: { $gte: startOfDay, $lte: endOfDay } }),
+      Food.find({ user: userId, foodDate: { $gte: startOfDay, $lte: endOfDay } }),
+      Water.find({ user: userId, intakeDate: { $gte: startOfDay, $lte: endOfDay } }),
+      Goal.find({ user: userId, status: 'Active' }),
+    ]);
+
+    // 5. Check if API Key is configured in environment
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn('Gemini API key is not configured. Falling back to local chat reply.');
+      const fallbackReply = generateLocalFallbackChatReply(user, workoutsToday, foodToday, waterToday, activeGoals, message);
+      return res.status(200).json({
+        success: true,
+        source: 'fallback',
+        data: {
+          reply: fallbackReply,
+        },
+      });
+    }
+
+    // 6. Initialize Gemini Client
+    const genAI = new GoogleGenerativeAI(apiKey);
+
+    // 7. Calculate aggregates for prompt
+    const caloriesConsumed = foodToday.reduce((sum, f) => sum + f.calories, 0);
+    const caloriesBurned = workoutsToday.reduce((sum, w) => sum + w.caloriesBurned, 0);
+    const waterIntakeTotal = waterToday.reduce((sum, w) => sum + w.amount, 0);
+
+    // 8. Construct System & User Prompt
+    const prompt = `You are FitAI, a professional certified fitness coach.
+Always provide safe, beginner-friendly advice.
+Use the user's profile and today's fitness data to personalize answers.
+Never answer unrelated topics.
+
+User Profile:
+- Name: ${user.name}
+- Age: ${user.age || 'Not provided'}
+- Gender: ${user.gender || 'Not provided'}
+- Height: ${user.height ? `${user.height} cm` : 'Not provided'}
+- Weight: ${user.weight ? `${user.weight} kg` : 'Not provided'}
+
+Today's Fitness Data:
+- Active Goals: ${activeGoals.length > 0 ? activeGoals.map(g => `${g.goalType} (Target Weight: ${g.targetWeight} kg, Current: ${g.currentWeight} kg)`).join(', ') : 'None'}
+- Workouts: ${workoutsToday.length > 0 ? workoutsToday.map(w => `${w.workoutType} (${w.duration} mins, ${w.caloriesBurned} kcal burned)`).join(', ') : 'None logged today'} (Total calories burned: ${caloriesBurned} kcal)
+- Food Intake: ${foodToday.length > 0 ? foodToday.map(f => `${f.foodName} (${f.calories} kcal)`).join(', ') : 'None logged today'} (Total calories consumed: ${caloriesConsumed} kcal)
+- Water Intake: ${waterIntakeTotal} ml
+
+User Message: "${message}"
+
+Please respond to the User Message directly, utilizing their profile and data to make the answer highly relevant. Remember: never answer unrelated topics, and always keep advice safe and beginner-friendly.`;
+
+    // 9. Call Gemini models in sequence (fallback chain)
+    let replyText = null;
+    let selectedModel = null;
+    let lastError = null;
+
+    for (const modelName of SUPPORTED_MODELS) {
+      selectedModel = modelName;
+      try {
+        console.log(`[AI Chat] Initializing Gemini call.`);
+        console.log(`[AI Chat] Selected Model: ${selectedModel}`);
+        console.log(`[AI Chat] Request Payload:\n${prompt}`);
+
+        const model = genAI.getGenerativeModel({ model: selectedModel });
+        replyText = await callGeminiWithRetry(model, prompt);
+
+        console.log(`[AI Chat] Gemini Response:\n${replyText}`);
+        console.log(`[AI Chat] Successfully generated content using model: ${selectedModel}`);
+        break; // Success! Break out of the loop
+      } catch (err) {
+        lastError = err;
+        console.error(`[AI Chat] Model ${selectedModel} failed. Error: ${err.message}`);
+      }
+    }
+
+    if (!replyText) {
+      throw new Error(`All Gemini models failed. Last error: ${lastError ? lastError.message : 'Unknown'}`);
+    }
+
+    // 10. Send successful response
+    return res.status(200).json({
+      success: true,
+      source: 'gemini',
+      data: {
+        reply: replyText,
+      },
+    });
+
+  } catch (error) {
+    console.error('Error in Gemini AI Chat controller (attempting fallback):', error);
+
+    // If every Gemini model fails, return a locally generated helpful fitness reply using the available profile data.
+    if (user) {
+      const fallbackReply = generateLocalFallbackChatReply(
+        user,
+        workoutsToday || [],
+        foodToday || [],
+        waterToday || [],
+        activeGoals || [],
+        message
+      );
+
+      return res.status(200).json({
+        success: true,
+        source: 'fallback',
+        data: {
+          reply: fallbackReply,
+        },
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while processing your request.',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getRecommendations,
   getWorkoutPlan,
   analyzeFoodImage,
   getHealthScore,
+  chatWithAi,
 };
