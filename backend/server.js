@@ -49,14 +49,27 @@ const app = express();
 console.log('🚀 Express app instance created');
 
 // ============ MIDDLEWARE CONFIGURATION ============
-// Enable CORS for React frontend running on http://localhost:5173
+// Enable CORS for allowed origins: http://localhost:5173 and the deployed Vercel app
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://ai-fitness-tracker-henna.vercel.app'
+];
+
 app.use(
   cors({
-    origin: 'http://localhost:5173',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, Postman, or Thunder Client)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error('Not allowed by CORS'), false);
+      }
+    },
     credentials: true,
   })
 );
-console.log('⚙️  CORS middleware enabled for http://localhost:5173');
+console.log('⚙️  CORS middleware enabled for allowed origins');
 
 // Enable express.json() middleware to parse incoming JSON requests
 // This allows the server to automatically parse JSON request bodies
