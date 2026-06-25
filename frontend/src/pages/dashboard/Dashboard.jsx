@@ -12,6 +12,7 @@ import { Sparkles, Brain, Award } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import { toTitleCase } from '../../utils/formatters';
 
 /**
  * Dashboard Component
@@ -193,7 +194,7 @@ const Dashboard = () => {
   }
 
   // Get first name of authenticated user
-  const userFirstName = currentUser?.name ? currentUser.name.split(' ')[0] : 'User';
+  const userFirstName = currentUser?.name ? toTitleCase(currentUser.name.split(' ')[0]) : 'User';
 
   // Map backend goals list to structure expected by GoalsCard
   const activeGoals = goals

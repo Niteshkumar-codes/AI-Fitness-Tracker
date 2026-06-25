@@ -25,11 +25,21 @@ const getBmiCategory = (bmi) => {
   return 'Obese';
 };
 
+// Helper to convert string to Title Case
+const toTitleCase = (str) => {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 // Local recommendation generation helper
 const generateLocalFallbackRecommendations = (user, bmi, caloriesConsumed, caloriesBurned, waterIntakeTotal, activeGoals) => {
   let text = `### Health & Fitness Report (Automated Fallback)
 
-Hello ${user.name || 'User'}, our AI Service is temporarily experiencing high traffic, so we have compiled a personalized report based on your local metrics:
+Hello ${user.name ? toTitleCase(user.name) : 'User'}, our AI Service is temporarily experiencing high traffic, so we have compiled a personalized report based on your local metrics:
 
 1. **BMI & Physical Metrics**
    - Height: ${user.height ? `${user.height} cm` : 'Not provided'}
@@ -79,7 +89,7 @@ Hello ${user.name || 'User'}, our AI Service is temporarily experiencing high tr
 const generateLocalFallbackWorkoutPlan = (user, bmi, activeGoals) => {
   let text = `### 7-Day Workout Plan (Automated Fallback)
 
-Hello ${user.name || 'User'}, our AI Service is temporarily experiencing high traffic, so we have compiled a 7-day personalized workout plan based on your metrics:
+Hello ${user.name ? toTitleCase(user.name) : 'User'}, our AI Service is temporarily experiencing high traffic, so we have compiled a 7-day personalized workout plan based on your metrics:
 
 User Metrics:
 - Height: ${user.height ? `${user.height} cm` : 'Not provided'}
@@ -211,7 +221,7 @@ Keep response practical and beginner-friendly.
 Return plain text recommendations.
 
 User's Fitness Data:
-- Name: ${user.name}
+- Name: ${toTitleCase(user.name)}
 - Age: ${user.age || 'Not provided'}
 - Gender: ${user.gender || 'Not provided'}
 - Height: ${user.height ? `${user.height} cm` : 'Not provided'}
@@ -789,10 +799,10 @@ const getHealthScore = async (req, res) => {
 const generateLocalFallbackChatReply = (user, workouts, food, water, goals, userMessage) => {
   const query = (userMessage || '').toLowerCase();
   
-  let reply = `Hello ${user.name || 'User'}! I am FitAI, your fitness assistant. Our AI servers are currently busy, but here is some personalized advice based on your profile and activity:
+  let reply = `Hello ${user.name ? toTitleCase(user.name) : 'User'}! I am FitAI, your fitness assistant. Our AI servers are currently busy, but here is some personalized advice based on your profile and activity:
 
 Your Profile:
-- Name: ${user.name || 'User'}
+- Name: ${user.name ? toTitleCase(user.name) : 'User'}
 - Age: ${user.age ? `${user.age} years` : 'Not provided'}
 - Gender: ${user.gender || 'Not provided'}
 - Height: ${user.height ? `${user.height} cm` : 'Not provided'}
@@ -896,7 +906,7 @@ Use the user's profile and today's fitness data to personalize answers.
 Never answer unrelated topics.
 
 User Profile:
-- Name: ${user.name}
+- Name: ${toTitleCase(user.name)}
 - Age: ${user.age || 'Not provided'}
 - Gender: ${user.gender || 'Not provided'}
 - Height: ${user.height ? `${user.height} cm` : 'Not provided'}

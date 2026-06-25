@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { Bell, Search, Menu, ChevronDown, User, Settings, LogOut } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
+import { toTitleCase } from '../../utils/formatters';
 
 /**
  * Navbar Component
@@ -122,7 +123,7 @@ const Navbar = ({ setIsMobileOpen }) => {
               {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
             </div>
             <div className="hidden sm:block">
-              <span className="font-semibold text-slate-200 text-xs block leading-none">{currentUser?.name || 'User'}</span>
+              <span className="font-semibold text-slate-200 text-xs block leading-none">{currentUser?.name ? toTitleCase(currentUser.name) : 'User'}</span>
               <span className="text-[9px] text-slate-500 leading-none">Fitness Member</span>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-slate-500" />

@@ -5,6 +5,7 @@ import { User, Mail, Calendar, Scale, Ruler, LogOut, Shield, Heart, Loader2 } fr
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import { toTitleCase } from '../../utils/formatters';
 
 /**
  * Profile Component
@@ -213,7 +214,7 @@ const Profile = () => {
               <span className="text-white text-3xl font-black">{user.name ? user.name.charAt(0).toUpperCase() : 'U'}</span>
             </div>
             <div className="flex flex-col gap-1">
-              <h2 className="font-extrabold text-white text-lg">{user.name}</h2>
+              <h2 className="font-extrabold text-white text-lg">{user.name ? toTitleCase(user.name) : 'User Name'}</h2>
               <span className="text-xs text-slate-400 flex items-center justify-center gap-1"><Mail className="w-3.5 h-3.5" />{user.email}</span>
             </div>
             <div className="px-3 py-1 rounded-full bg-purple-600/10 border border-purple-500/20 text-[10px] font-bold text-purple-400 mt-1 uppercase tracking-wider flex items-center gap-1">
