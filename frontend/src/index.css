@@ -254,4 +254,111 @@ body {
   animation: float-particle-3 9s infinite ease-in-out;
 }
 
+/* Smooth Scrolling & Layout Helpers for SaaS Landing Page */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5.5rem; /* Offsets sticky navbar height */
+}
+
+/* Premium Slim Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #030712;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+  border: 2px solid #030712;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Animated Gradient Background for CTA */
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+.animate-gradient-bg {
+  background-size: 200% 200%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+/* Timeline dash array animation */
+@keyframes draw-timeline {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.animate-timeline-trail {
+  stroke-dasharray: 10;
+  stroke-dashoffset: 100;
+  animation: draw-timeline 5s linear infinite;
+}
+
+/* Grid background helper for SaaS */
+.bg-grid-pattern {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+/* Floating animation variants */
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(2deg); }
+}
+@keyframes float-medium {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-7px) rotate(-1.5deg); }
+}
+@keyframes float-fast {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+.animate-float-slow {
+  animation: float-slow 8s infinite ease-in-out;
+}
+.animate-float-medium {
+  animation: float-medium 6s infinite ease-in-out;
+}
+.animate-float-fast {
+  animation: float-fast 4s infinite ease-in-out;
+}
+
+/* Pulse glow animation */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.15;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(1.03);
+  }
+}
+.animate-pulse-glow {
+  animation: pulse-glow 5s infinite ease-in-out;
+}
+
+/* Dot matrix grid background */
+.bg-dot-pattern {
+  background-size: 24px 24px;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1.2px, transparent 1.2px);
+}
+
+
+
+
 

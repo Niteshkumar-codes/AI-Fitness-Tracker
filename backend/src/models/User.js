@@ -45,20 +45,20 @@ const userSchema = new mongoose.Schema(
       max: [120, 'Invalid age'],
     },
 
-    // User's gender
     gender: {
       type: String,
       enum: {
-        values: ['Male', 'Female', 'Other', 'prefer not to say'],
+        values: ['Male', 'Female', 'Other', 'Prefer Not To Say', 'prefer not to say'],
         message: '{VALUE} is not a supported gender option',
       },
-      default: 'prefer not to say',
+      default: 'Prefer Not To Say',
       set: function (val) {
         if (typeof val !== 'string') return val;
         const normalized = val.trim().toLowerCase();
         if (normalized === 'male') return 'Male';
         if (normalized === 'female') return 'Female';
         if (normalized === 'other') return 'Other';
+        if (normalized === 'prefer not to say') return 'Prefer Not To Say';
         return val;
       },
     },

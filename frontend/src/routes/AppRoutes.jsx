@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthContext } from '../context/AuthContext';
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
+import Landing from '../pages/Landing';
 import Dashboard from '../pages/dashboard/Dashboard';
 import Workouts from '../pages/workouts/Workouts';
 import FoodTracker from '../pages/food/FoodTracker';
@@ -167,8 +168,8 @@ const AppRoutes = () => {
           } 
         />
 
-        {/* Redirect Root path to /dashboard or /login */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        {/* Redirect Root path to Landing Page */}
+        <Route path="/" element={<Landing />} />
         
         {/* Fallback 404 Route */}
         <Route 

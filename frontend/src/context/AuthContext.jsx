@@ -125,6 +125,14 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
   };
 
+  /**
+   * Update current user details reactively
+   */
+  const updateCurrentUser = (userData) => {
+    setCurrentUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
+
   // context payload containing functions and states
   const contextValue = {
     currentUser,
@@ -134,6 +142,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    updateCurrentUser,
   };
 
   return (

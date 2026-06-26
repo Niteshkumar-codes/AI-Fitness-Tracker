@@ -48,7 +48,7 @@ const registerUser = async (req, res) => {
       email,
       password,
       age: age || null,
-      gender: gender || 'prefer not to say',
+      gender: gender || 'Prefer Not To Say',
       height: height || null,
       weight: weight || null,
       profileImage: profileImage || null,

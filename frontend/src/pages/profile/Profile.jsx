@@ -13,7 +13,7 @@ import { toTitleCase } from '../../utils/formatters';
  * Connects to the backend GET /api/auth/profile endpoint.
  */
 const Profile = () => {
-  const { logout } = useContext(AuthContext);
+  const { logout, updateCurrentUser } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
@@ -34,10 +34,18 @@ const Profile = () => {
 
   const handleEditClick = () => {
     if (profile) {
+      let initialGender = 'Prefer Not To Say';
+      if (profile.gender) {
+        const normalized = profile.gender.trim().toLowerCase();
+        if (normalized === 'male') initialGender = 'Male';
+        else if (normalized === 'female') initialGender = 'Female';
+        else if (normalized === 'other') initialGender = 'Other';
+      }
+
       setFormData({
         name: profile.name || '',
         age: profile.age || '',
-        gender: profile.gender || 'Prefer Not To Say',
+        gender: initialGender,
         height: profile.height || '',
         weight: profile.weight || '',
       });
@@ -113,6 +121,9 @@ const Profile = () => {
           }
         });
         setProfile(response.data.user);
+        if (updateCurrentUser) {
+          updateCurrentUser(response.data.user);
+        }
         setIsEditModalOpen(false);
       }
     } catch (err) {
@@ -131,6 +142,9 @@ const Profile = () => {
       const response = await api.get('/auth/profile');
       if (response.data && response.data.success) {
         setProfile(response.data.user);
+        if (updateCurrentUser) {
+          updateCurrentUser(response.data.user);
+        }
       }
     } catch (err) {
       console.error('Failed to load profile:', err);
@@ -186,7 +200,7 @@ const Profile = () => {
     height: null,
     weight: null,
     age: null,
-    gender: 'prefer not to say',
+    gender: 'Prefer Not To Say',
   };
 
   return (
@@ -283,7 +297,7 @@ const Profile = () => {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[10px] font-bold uppercase text-slate-500">Gender</span>
-                  <span className="text-base font-extrabold text-white capitalize">{user.gender || 'Not set'}</span>
+                  <span className="text-base font-extrabold text-white">{user.gender || 'Not set'}</span>
                 </div>
               </div>
             </div>
