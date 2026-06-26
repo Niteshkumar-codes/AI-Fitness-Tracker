@@ -127,3 +127,68 @@ body {
   border-color: rgba(6, 182, 212, 0.45) !important;
   box-shadow: 0 0 40px rgba(6, 182, 212, 0.18) !important;
 }
+
+/* Premium Auth Pages Animations */
+@keyframes drift-glow-1 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+    opacity: 0.25;
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.15);
+    opacity: 0.4;
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+    opacity: 0.3;
+  }
+}
+
+@keyframes drift-glow-2 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translate(-40px, 40px) scale(1.2);
+    opacity: 0.35;
+  }
+}
+
+@keyframes drift-glow-3 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(0.95);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translate(50px, -20px) scale(1.1);
+    opacity: 0.3;
+  }
+}
+
+.animate-drift-glow-1 {
+  animation: drift-glow-1 12s infinite ease-in-out;
+}
+
+.animate-drift-glow-2 {
+  animation: drift-glow-2 15s infinite ease-in-out;
+}
+
+.animate-drift-glow-3 {
+  animation: drift-glow-3 18s infinite ease-in-out;
+}
+
+/* Subtle floating animation */
+@keyframes subtle-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-subtle-float {
+  animation: subtle-float 6s infinite ease-in-out;
+}
+
