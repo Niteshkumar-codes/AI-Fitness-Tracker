@@ -49,7 +49,7 @@ const app = express();
 console.log('🚀 Express app instance created');
 
 // ============ MIDDLEWARE CONFIGURATION ============
-// Enable CORS for allowed origins: http://localhost:5173 and the deployed production app
+// Enable CORS for allowed origins: localhost (any development port) and the deployed production app
 const allowedOrigins = [
   'http://localhost:5173',
   process.env.FRONTEND_URL
@@ -60,7 +60,11 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, curl, Postman, or Thunder Client)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
+      
+      // Allow any local Vite development port (e.g., http://localhost:5173, 5174, 5175, etc.)
+      const isLocalhost = /^http:\/\/localhost(:\d+)?$/.test(origin);
+      
+      if (isLocalhost || allowedOrigins.includes(origin)) {
         return callback(null, true);
       } else {
         return callback(new Error('Not allowed by CORS'), false);
