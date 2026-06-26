@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
 import { 
   LayoutDashboard, 
   Dumbbell, 
@@ -30,6 +31,7 @@ import {
  */
 const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }) => {
   const location = useLocation();
+  const { logout } = useContext(AuthContext);
 
   // Active route matching helper
   const isActive = (path) => {
@@ -51,8 +53,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
 
   const handleLogout = () => {
     console.log('Logging out...');
-    // TODO: Connect AuthContext logout
-    localStorage.removeItem('token');
+    logout();
     window.location.href = '/login';
   };
 

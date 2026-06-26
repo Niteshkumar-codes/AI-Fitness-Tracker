@@ -14,7 +14,7 @@ import { toTitleCase } from '../../utils/formatters';
  * - setIsMobileOpen: State setter to trigger mobile sidebar drawer.
  */
 const Navbar = ({ setIsMobileOpen }) => {
-  const { currentUser } = useContext(AuthContext);
+  const { currentUser, logout } = useContext(AuthContext);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifications, setNotifications] = useState([
     { id: 1, message: 'You reached your water target yesterday! 💧', unread: true },
@@ -25,7 +25,7 @@ const Navbar = ({ setIsMobileOpen }) => {
   const unreadCount = notifications.filter(n => n.unread).length;
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    logout();
     window.location.href = '/login';
   };
 

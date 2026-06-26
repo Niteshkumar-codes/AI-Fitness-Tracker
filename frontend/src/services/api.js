@@ -46,9 +46,10 @@ api.interceptors.response.use(
     // Check if error is due to expired or missing token
     if (error.response && error.response.status === 401) {
       console.warn('Unauthorized request. Logging out user...');
-      // Clear local storage and redirect if needed
+      // Clear local storage and redirect immediately
       localStorage.removeItem('token');
-      // Optional: window.location.href = '/login';
+      localStorage.removeItem('user');
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
